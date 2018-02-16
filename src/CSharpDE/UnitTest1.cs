@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using CSharpDE.Core;
 using Xunit;
 
@@ -14,46 +15,36 @@ namespace CSharpDE
         }
     }
 
-    public class OptimizationProblem<TIndividual, TFitnessFunction, TGene> 
-        where TFitnessFunction : IFitnessFunction<TIndividual>
-        where TIndividual : IIndividual<TGene>
+    public abstract class OptimizationProblem
     {
-        private readonly TFitnessFunction _fitnessFunction;
-        private readonly List<GeneConfiguration<TGene>> _geneConfigurations;
+        protected abstract bool IsFeasible(Individual individual);
+        protected abstract double CalculateFitnessValue(Individual individual);
+        protected abstract Individual CreateRandomIndividual();
+    }
 
-        public OptimizationProblem(TFitnessFunction fitnessFunction, List<GeneConfiguration<TGene>> geneConfigurations)
+
+    public class MyOptimizationProblem : OptimizationProblem
+    {
+        private readonly Random _rnd;
+
+        public MyOptimizationProblem()
         {
-            _fitnessFunction = fitnessFunction;
-            _geneConfigurations = geneConfigurations;
+            _rnd = new Random((int)DateTime.Now.Ticks);
+        }
+        
+        protected override bool IsFeasible(Individual individual) => true;
+        protected override double CalculateFitnessValue(Individual individual) => individual[0] * individual[1];
+        protected override Individual CreateRandomIndividual() => new Individual(_rnd.NextDouble(), _rnd.NextDouble());
+    }
+
+    public class Individual
+    {
+        public List<double> Genes { get; private set; }
+        public double this[int index] => Genes[index];
+
+        public Individual(params double[] genes)
+        {
+            Genes = genes.ToList();
         }
     }
-
-    public interface IIndividual<TGene>
-    {
-        IList<TGene> Genes { get; }
-    }
-
-    public interface IFitnessFunction<TIndividual>
-    {
-        double Evaluate(TIndividual individual);
-    }
-    
-    public class GeneConfiguration<TGene>
-    {
-    }
-
-    public class MyIndividual : IIndividual<double>
-    {
-        public IList<double> Genes { get; }
-    }
-
-    public class MyFitnessFunction<MyIndividual> : IFitnessFunction<MyIndividual>
-    {
-        public double Evaluate(MyIndividual individual)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-
 }

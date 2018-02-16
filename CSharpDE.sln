@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpDE", "CSharpDE\CSharpDE.csproj", "{EDD62161-3479-4D66-8C67-E28ED2498394}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpDE.Core", "src\CSharpDE.Core\CSharpDE.Core.csproj", "{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpDE", "src\CSharpDE\CSharpDE.csproj", "{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}"
@@ -12,10 +10,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EDD62161-3479-4D66-8C67-E28ED2498394}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDD62161-3479-4D66-8C67-E28ED2498394}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDD62161-3479-4D66-8C67-E28ED2498394}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDD62161-3479-4D66-8C67-E28ED2498394}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
