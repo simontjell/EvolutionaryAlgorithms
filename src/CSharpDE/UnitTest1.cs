@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using CSharpDE.Core;
 using Xunit;
 
 namespace CSharpDE
@@ -12,17 +11,52 @@ namespace CSharpDE
         [Fact]
         public void Test1()
         {
+            var de = new DifferentialEvolution(
+                new MyOptimizationProblem(), 
+                new OptimizationParameters { PopulationSize = 100 }
+            );
         }
     }
 
     public abstract class OptimizationProblem
     {
-        protected abstract bool IsFeasible(Individual individual);
-        protected abstract double CalculateFitnessValue(Individual individual);
-        protected abstract Individual CreateRandomIndividual();
+        public abstract double CalculateFitnessValue(Individual individual);
+        public abstract Individual CreateRandomIndividual();
+        public virtual bool IsFeasible(Individual individual) => true;
     }
 
+    public abstract class OptimizationAlgorithm
+    {
+        private readonly OptimizationProblem _optimizationProblem;
+        private readonly OptimizationParameters _optimizationParameters;
 
+        protected OptimizationAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters)
+        {
+            _optimizationProblem = optimizationProblem;
+            _optimizationParameters = optimizationParameters;
+
+            Population = 
+                Enumerable.Range(0, _optimizationParameters.PopulationSize)
+                .Select(i => _optimizationProblem.CreateRandomIndividual())
+                .ToList();
+        }
+
+        public List<Individual> Population { get; set; }
+    }
+
+    public class OptimizationParameters
+    {
+        public int PopulationSize { get; set; }
+    }
+
+    public class DifferentialEvolution : OptimizationAlgorithm
+    {
+        public DifferentialEvolution(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
+        {
+        }
+    }
+    
+    
     public class MyOptimizationProblem : OptimizationProblem
     {
         private readonly Random _rnd;
@@ -32,19 +66,19 @@ namespace CSharpDE
             _rnd = new Random((int)DateTime.Now.Ticks);
         }
         
-        protected override bool IsFeasible(Individual individual) => true;
-        protected override double CalculateFitnessValue(Individual individual) => individual[0] * individual[1];
-        protected override Individual CreateRandomIndividual() => new Individual(_rnd.NextDouble(), _rnd.NextDouble());
+        public override bool IsFeasible(Individual individual) => true;
+        public override double CalculateFitnessValue(Individual individual) => individual[0] * individual[1];
+        public override Individual CreateRandomIndividual() => new Individual(_rnd.NextDouble(), _rnd.NextDouble());
     }
 
     public class Individual
     {
-        public List<double> Genes { get; private set; }
-        public double this[int index] => Genes[index];
+        private readonly List<double> _genes;
+        public double this[int index] => _genes[index];
 
         public Individual(params double[] genes)
         {
-            Genes = genes.ToList();
+            _genes = genes.ToList();
         }
     }
 }

@@ -9,7 +9,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\CSharpDE.Core\CSharpDE.Core.csproj">
+    <ProjectReference Include="..\CSharpDE.Core\CSharpDE.Core.csproj">
       <Project>{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}</Project>
       <Name>CSharpDE.Core</Name>
     </ProjectReference>
