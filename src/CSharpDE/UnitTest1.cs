@@ -36,8 +36,8 @@ namespace CSharpDE
             _optimizationParameters = optimizationParameters;
 
             Population = 
-                Enumerable.Range(0, _optimizationParameters.PopulationSize)
-                .Select(i => _optimizationProblem.CreateRandomIndividual())
+                Enumerable.Repeat<Func<Individual>>(_optimizationProblem.CreateRandomIndividual, _optimizationParameters.PopulationSize)
+                .SelectInvoke()
                 .ToList();
         }
 
@@ -47,6 +47,12 @@ namespace CSharpDE
     public class OptimizationParameters
     {
         public int PopulationSize { get; set; }
+        public List<TerminationCriterion> TerminationCriteria { get; set; }
+    }
+
+    public abstract class TerminationCriterion
+    {
+        public abstract bool ShouldTerminate(OptimizationAlgorithm optimizationAlgorithm);
     }
 
     public class DifferentialEvolution : OptimizationAlgorithm
