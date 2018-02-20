@@ -39,15 +39,6 @@ namespace CSharpDE
         {
             _optimizationProblem = optimizationProblem;
             _optimizationParameters = optimizationParameters;
-
-<<<<<<< HEAD
-
-=======
-            Population = 
-                Enumerable.Repeat<Func<Individual>>(_optimizationProblem.CreateRandomIndividual, _optimizationParameters.PopulationSize)
-                .SelectInvoke()
-                .ToList();
->>>>>>> ae649283f9f8e3f71a9881af11c5f1aee0985230
         }
 
         // https://en.wikipedia.org/wiki/Evolutionary_algorithm
@@ -60,11 +51,13 @@ namespace CSharpDE
             FitnessValues = Generations.Single().Population.ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
 
             // Step Three: Repeat the following regenerational steps until termination:
-
-            // Select the best - fit individuals for reproduction. (Parents)
-            // Breed new individuals through crossover and mutation operations to give birth to offspring.
-            // Evaluate the individual fitness of new individuals.
-            // Replace least - fit population with new individuals.
+            while(_optimizationParameters.TerminationCriteria.All(criterion => criterion.ShouldTerminate(this) == false))
+            {
+                // Select the best - fit individuals for reproduction. (Parents)
+                // Breed new individuals through crossover and mutation operations to give birth to offspring.
+                // Evaluate the individual fitness of new individuals.
+                // Replace least - fit population with new individuals.
+            }
 
             throw new NotImplementedException();
         }
@@ -91,7 +84,7 @@ namespace CSharpDE
 
     public abstract class TerminationCriterion
     {
-        public abstract bool ShouldTerminate(OptimizationAlgorithm optimizationAlgorithm);
+                public abstract bool ShouldTerminate(EvolutionaryAlgorithm optimizationAlgorithm);
     }
 
     public class DifferentialEvolution : EvolutionaryAlgorithm
