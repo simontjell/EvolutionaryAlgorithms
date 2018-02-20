@@ -54,6 +54,7 @@ namespace CSharpDE
             while(_optimizationParameters.TerminationCriteria.All(criterion => criterion.ShouldTerminate(this) == false))
             {
                 // Select the best - fit individuals for reproduction. (Parents)
+                var parents = SelectParents();
                 // Breed new individuals through crossover and mutation operations to give birth to offspring.
                 // Evaluate the individual fitness of new individuals.
                 // Replace least - fit population with new individuals.
@@ -61,6 +62,8 @@ namespace CSharpDE
 
             throw new NotImplementedException();
         }
+
+        protected abstract ImmutableList<Individual> SelectParents();
 
         protected virtual Generation InitializeFirstGeneration()
         {
@@ -92,6 +95,9 @@ namespace CSharpDE
         public DifferentialEvolution(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
         {
         }
+
+        protected override ImmutableList<Individual> SelectParents()
+            => Generations.Last().Population;   // Take all...S
     }
     
     
@@ -122,6 +128,6 @@ namespace CSharpDE
 
     public class Generation
     {
-        public List<Individual> Population { get; set; }
+        public ImmutableList<Individual> Population { get; set; }
     }
 }
