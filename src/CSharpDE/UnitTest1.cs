@@ -40,7 +40,14 @@ namespace CSharpDE
             _optimizationProblem = optimizationProblem;
             _optimizationParameters = optimizationParameters;
 
+<<<<<<< HEAD
 
+=======
+            Population = 
+                Enumerable.Repeat<Func<Individual>>(_optimizationProblem.CreateRandomIndividual, _optimizationParameters.PopulationSize)
+                .SelectInvoke()
+                .ToList();
+>>>>>>> ae649283f9f8e3f71a9881af11c5f1aee0985230
         }
 
         // https://en.wikipedia.org/wiki/Evolutionary_algorithm
@@ -79,6 +86,12 @@ namespace CSharpDE
     public class OptimizationParameters
     {
         public int PopulationSize { get; set; }
+        public List<TerminationCriterion> TerminationCriteria { get; set; }
+    }
+
+    public abstract class TerminationCriterion
+    {
+        public abstract bool ShouldTerminate(OptimizationAlgorithm optimizationAlgorithm);
     }
 
     public class DifferentialEvolution : EvolutionaryAlgorithm
