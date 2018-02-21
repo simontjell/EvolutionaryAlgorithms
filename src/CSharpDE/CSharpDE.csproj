@@ -10,8 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CSharpDE.Core\CSharpDE.Core.csproj">
-      <Project>{CD97FFC1-7482-47FB-99AF-E193B42A9EE2}</Project>
-      <Name>CSharpDE.Core</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>

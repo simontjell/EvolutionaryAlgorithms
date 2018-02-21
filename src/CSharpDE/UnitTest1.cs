@@ -20,17 +20,12 @@ namespace CSharpDE
                 )
             );
 
-            //var optimizationAlgorithm = new NaiveOptimizationAlgorithm(
-            //    new MyOptimizationProblem(),
-            //    new OptimizationParameters { PopulationSize = 100 }
-            //);
-
             optimizationAlgorithm.Optimize();
 
         }
     }
 
-    public class NaiveOptimizationAlgorithm : EvolutionaryAlgorithm
+    public class NaiveOptimizationAlgorithm : EvolutionaryAlgorithm<OptimizationParameters>
     {
         public NaiveOptimizationAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters){ }
 
@@ -41,108 +36,6 @@ namespace CSharpDE
 
         protected override ImmutableList<Individual> SelectParents()
             => Generations.Last().Population;
-    }
-
-    public abstract class OptimizationProblem
-    {
-        public abstract double CalculateFitnessValue(Individual individual);
-        public abstract Individual CreateRandomIndividual();
-        public virtual bool IsFeasible(Individual individual) => true;
-    }
-
-    public abstract class EvolutionaryAlgorithm
-    {
-        protected readonly OptimizationProblem _optimizationProblem;
-        protected readonly OptimizationParameters _optimizationParameters;
-
-        public ImmutableList<Generation> Generations { get; protected set; }
-        public ImmutableDictionary<Individual, double> FitnessValues { get; protected set; }
-
-        protected EvolutionaryAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters)
-        {
-            _optimizationProblem = optimizationProblem;
-            _optimizationParameters = optimizationParameters;
-        }
-
-        // The comments below are taken from the pseudo code specification in https://en.wikipedia.org/wiki/Evolutionary_algorithm
-        public virtual void Optimize()
-        {
-            // Step One: Generate the initial population of individuals randomly. (First generation)
-            Generations = new List<Generation>{ InitializeFirstGeneration() }.ToImmutableList();
-
-            // Step Two: Evaluate the fitness of each individual in that population(time limit, sufficient fitness achieved, etc.)
-            FitnessValues = Generations.Single().Population.ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
-
-            // Step Three: Repeat the following regenerational steps until termination:
-            while (_optimizationParameters.TerminationCriteria?.All(criterion => criterion.ShouldTerminate(this) == false) ?? true == true)
-            {
-                // Select the best - fit individuals for reproduction. (Parents)
-                var parents = SelectParents();
-
-                // Breed new individuals through crossover and mutation operations to give birth to offspring.
-                var offspring = CreateOffspring(parents);
-
-                // Evaluate the individual fitness of new individuals.
-                var offspringFitnessValues = offspring.Cast<Individual>().ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
-
-                // Replace least-fit population with new individuals.
-                var newPopulation = new List<Individual>();
-                var newFitnessValues = new List<KeyValuePair<Individual, double>>();
-
-                foreach (var offsprintIndividual in offspring)
-                {
-                    if (ShouldReplaceParents(offsprintIndividual, offspringFitnessValues))
-                    {
-                        newPopulation.Add(offsprintIndividual);
-                        newFitnessValues.Add(new KeyValuePair<Individual, double>(offsprintIndividual, offspringFitnessValues[offsprintIndividual]));
-                    }
-                    else
-                    {
-                        newPopulation.AddRange(offsprintIndividual.Parents);
-                    }
-                }
-
-                FitnessValues = FitnessValues.AddRange(newFitnessValues);
-                Generations = Generations.Add(new Generation(newPopulation.ToImmutableList()));
-            }
-        }
-
-        private double FindBestFitnessValue(Generation generation) 
-            => generation.Population.Select(individual => FitnessValues[individual]).Min();
-
-        protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues)
-            => offspringFitnessValues[offsprintIndividual] < offsprintIndividual.Parents.Select(p => FitnessValues[p]).Min();
-
-        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents);
-        protected abstract ImmutableList<Individual> SelectParents();
-
-        protected virtual Generation InitializeFirstGeneration()
-        {
-            return new Generation(
-                Enumerable.Range(0, _optimizationParameters.PopulationSize)
-                .Select(i => _optimizationProblem.CreateRandomIndividual())
-                .ToImmutableList()
-            );
-        }
-    }
-
-
-
-    public class OptimizationParameters
-    {
-        public OptimizationParameters(int populationSize, params TerminationCriterion[] terminationCriteria)
-        {
-            PopulationSize = populationSize;
-            TerminationCriteria = terminationCriteria;
-        }
-
-        public int PopulationSize { get; private set; }
-        public IEnumerable<TerminationCriterion> TerminationCriteria { get; private set; }
-    }
-
-    public abstract class TerminationCriterion
-    {
-        public abstract bool ShouldTerminate(EvolutionaryAlgorithm optimizationAlgorithm);
     }
 
     public class LambdaTerminationCriterion : TerminationCriterion
@@ -159,6 +52,9 @@ namespace CSharpDE
 
     public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
     {
+        public double CR { get; private set; } = 0.5;
+        public double F { get; private set; } = 1.0;
+
         public DifferentialEvolutionOptimizationParameters(int populationSize, params TerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
         {
             if (populationSize < 4)
@@ -170,13 +66,11 @@ namespace CSharpDE
 
 
     // https://en.wikipedia.org/wiki/Differential_evolution
-    public class DifferentialEvolution : EvolutionaryAlgorithm
+    public class DifferentialEvolution : EvolutionaryAlgorithm<DifferentialEvolutionOptimizationParameters>
     {
         private readonly Random _random;
 
         // TODO: This are parameters - but DE-specific ones...
-        private const double CR = 0.5;
-        private const double F = 1.0;
 
         public DifferentialEvolution(OptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
         {
@@ -201,7 +95,7 @@ namespace CSharpDE
 
                         var R = _random.Next(0, n);
 
-                        return new Offspring(x, new Individual(x.Genes.Select((xi, i) => _random.NextDouble() < CR || i == R ? a[i] + F * (b[i] - c[i]) : xi).ToArray()));
+                return new Offspring(x, new Individual(x.Genes.Select((xi, i) => _random.NextDouble() < _optimizationParameters.CR || i == R ? a[i] + _optimizationParameters.F * (b[i] - c[i]) : xi).ToArray()));
                     }
                 )
                 .ToImmutableList();
