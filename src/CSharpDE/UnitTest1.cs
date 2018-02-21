@@ -16,7 +16,7 @@ namespace CSharpDE
                 new MyOptimizationProblem(),
                 new DifferentialEvolutionOptimizationParameters(
                     100,
-                    new LambdaTerminationCriterion(algorithm => algorithm.Generations.Last().Population.Any(individual => algorithm.FitnessValues[individual] == 0.0))  // TODO: Rethink the interface for getting best fit individual(s)
+                    new LambdaTerminationCriterion(algorithm => algorithm.Generations.Last().Population.Any(individual => algorithm.FitnessValues[individual].Any(fitnessValue => fitnessValue == 0.0)))  // TODO: Rethink the interface for getting best fit individual(s)
                 )
             );
 
@@ -111,7 +111,7 @@ namespace CSharpDE
         }
         
         public override bool IsFeasible(Individual individual) => true;
-        public override double CalculateFitnessValue(Individual individual) => Math.Pow(individual[0] * individual[1], 2.0);
+        public override ImmutableList<double> CalculateFitnessValue(Individual individual) => new List<double> { Math.Pow(individual[0] * individual[1], 2.0) }.ToImmutableList();
         public override Individual CreateRandomIndividual() => new Individual(_rnd.NextDouble(), _rnd.NextDouble());
     }
 

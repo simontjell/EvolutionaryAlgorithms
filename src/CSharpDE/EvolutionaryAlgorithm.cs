@@ -14,7 +14,7 @@ namespace CSharpDE
         }
 
         public ImmutableList<Generation> Generations { get; protected set; }
-        public ImmutableDictionary<Individual, double> FitnessValues { get; protected set; }
+        public ImmutableDictionary<Individual, ImmutableList<double>> FitnessValues { get; protected set; }
 
         // The comments below are taken from the pseudo code specification in https://en.wikipedia.org/wiki/Evolutionary_algorithm
         public virtual void Optimize()
@@ -32,25 +32,25 @@ namespace CSharpDE
                 var parents = SelectParents();
 
                 // Breed new individuals through crossover and mutation operations to give birth to offspring.
-                var offspring = CreateOffspring(parents);
+                var offspringIndividuals = CreateOffspring(parents);
 
                 // Evaluate the individual fitness of new individuals.
-                var offspringFitnessValues = offspring.Cast<Individual>().ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
+                var offspringFitnessValues = offspringIndividuals.Cast<Individual>().ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
 
                 // Replace least-fit population with new individuals.
                 var newPopulation = new List<Individual>();
-                var newFitnessValues = new List<KeyValuePair<Individual, double>>();
+                var newFitnessValues = new List<KeyValuePair<Individual, ImmutableList<double>>>();
 
-                foreach (var offsprintIndividual in offspring)
+                foreach (var offspringIndividual in offspringIndividuals)
                 {
-                    if (ShouldReplaceParents(offsprintIndividual, offspringFitnessValues))
+                    if (ShouldReplaceParents(offspringIndividual, offspringFitnessValues))
                     {
-                        newPopulation.Add(offsprintIndividual);
-                        newFitnessValues.Add(new KeyValuePair<Individual, double>(offsprintIndividual, offspringFitnessValues[offsprintIndividual]));
+                        newPopulation.Add(offspringIndividual);
+                        newFitnessValues.Add(new KeyValuePair<Individual, ImmutableList<double>>(offspringIndividual, offspringFitnessValues[offspringIndividual]));
                     }
                     else
                     {
-                        newPopulation.AddRange(offsprintIndividual.Parents);
+                        newPopulation.AddRange(offspringIndividual.Parents);
                     }
                 }
 
@@ -63,8 +63,9 @@ namespace CSharpDE
 
         protected abstract bool ShouldContinue();
 
-        protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues)
-            => offspringFitnessValues[offsprintIndividual] < offsprintIndividual.Parents.Select(p => FitnessValues[p]).Min();
+        protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, ImmutableList<double>> offspringFitnessValues)
+        // TODO: Generalize this to a default approach for multi-objective problems
+            => offspringFitnessValues[offsprintIndividual].Single() < offsprintIndividual.Parents.Select(p => FitnessValues[p].Single()).Min();
 
         protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents);
         protected abstract ImmutableList<Individual> SelectParents();
