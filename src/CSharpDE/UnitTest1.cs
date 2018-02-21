@@ -12,15 +12,15 @@ namespace CSharpDE
         [Fact]
         public void Test1()
         {
-            //var de = new DifferentialEvolution(
-            //    new MyOptimizationProblem(), 
-            //    new OptimizationParameters { PopulationSize = 100 }
-            //);
-
-            var optimizationAlgorithm = new NaiveOptimizationAlgorithm(
+            var optimizationAlgorithm = new DifferentialEvolution(
                 new MyOptimizationProblem(),
                 new OptimizationParameters { PopulationSize = 100 }
             );
+
+            //var optimizationAlgorithm = new NaiveOptimizationAlgorithm(
+            //    new MyOptimizationProblem(),
+            //    new OptimizationParameters { PopulationSize = 100 }
+            //);
 
             optimizationAlgorithm.Optimize();
 
@@ -35,9 +35,6 @@ namespace CSharpDE
             => parents
                .Select(p => new Offspring(p, _optimizationProblem.CreateRandomIndividual()))
                .ToImmutableList();
-
-        protected override bool ReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues)
-            => offspringFitnessValues[offsprintIndividual] < offsprintIndividual.Parents.Select(p => FitnessValues[p]).Min();
 
         protected override ImmutableList<Individual> SelectParents()
             => Generations.Last().Population;
@@ -94,7 +91,7 @@ namespace CSharpDE
 
                 foreach (var offsprintIndividual in offspring)
                 {
-                    if (ReplaceParents(offsprintIndividual, offspringFitnessValues))
+                    if (ShouldReplaceParents(offsprintIndividual, offspringFitnessValues))
                     {
                         newPopulation.Add(offsprintIndividual);
                         newFitnessValues.Add(new KeyValuePair<Individual, double>(offsprintIndividual, offspringFitnessValues[offsprintIndividual]));
@@ -112,7 +109,9 @@ namespace CSharpDE
             throw new NotImplementedException();
         }
 
-        protected abstract bool ReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues);
+        protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues)
+            => offspringFitnessValues[offsprintIndividual] < offsprintIndividual.Parents.Select(p => FitnessValues[p]).Min();
+
         protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents);
         protected abstract ImmutableList<Individual> SelectParents();
 
@@ -139,18 +138,47 @@ namespace CSharpDE
         public abstract bool ShouldTerminate(EvolutionaryAlgorithm optimizationAlgorithm);
     }
 
-    //public class DifferentialEvolution : EvolutionaryAlgorithm
-    //{
-    //    public DifferentialEvolution(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters){ }
 
-    //    protected override ImmutableList<Individual> SelectParents()
-    //        => Generations.Last().Population;   // Take all...
+    // https://en.wikipedia.org/wiki/Differential_evolution
+    public class DifferentialEvolution : EvolutionaryAlgorithm
+    {
+        private readonly Random _random;
 
-    //    protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents)
-    //        => throw new NotImplementedException();
-    //}
-    
-    
+        // TODO: This are parameters - but DE-specific ones...
+        private const double CR = 0.5;
+        private const double F = 1.0;
+
+        public DifferentialEvolution(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
+        {
+            _random = new Random((int)DateTime.Now.Ticks);
+        }
+
+        protected override ImmutableList<Individual> SelectParents()
+            => Generations.Last().Population;   // Take all...
+
+        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents)
+        {
+            var n = parents.First().Genes.Count;
+
+            return 
+                parents
+                .Select(x =>
+                    {
+                        var abc = parents.OrderBy(individual => individual == x ? 0.0 : 1.0 + _random.NextDouble()).Skip(1).Take(3).ToImmutableList();
+                        var a = abc[0];
+                        var b = abc[1];
+                        var c = abc[2];
+
+                        var R = _random.Next(0, n);
+
+                        return new Offspring(x, new Individual(x.Genes.Select((xi, i) => _random.NextDouble() < CR || i == R ? a[i] + F * (b[i] - c[i]) : xi).ToArray()));
+                    }
+                )
+                .ToImmutableList();
+        }
+    }
+
+
     public class MyOptimizationProblem : OptimizationProblem
     {
         private readonly Random _rnd;
@@ -161,7 +189,7 @@ namespace CSharpDE
         }
         
         public override bool IsFeasible(Individual individual) => true;
-        public override double CalculateFitnessValue(Individual individual) => individual[0] * individual[1];
+        public override double CalculateFitnessValue(Individual individual) => Math.Pow(individual[0] * individual[1], 2.0);
         public override Individual CreateRandomIndividual() => new Individual(_rnd.NextDouble(), _rnd.NextDouble());
     }
 
