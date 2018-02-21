@@ -14,7 +14,10 @@ namespace CSharpDE
         {
             var optimizationAlgorithm = new DifferentialEvolution(
                 new MyOptimizationProblem(),
-                new OptimizationParameters { PopulationSize = 100 }
+                new DifferentialEvolutionOptimizationParameters(
+                    100,
+                    new LambdaTerminationCriterion(algorithm => algorithm.Generations.Last().Population.Any(individual => algorithm.FitnessValues[individual] == 0.0))  // TODO: Rethink the interface for getting best fit individual(s)
+                )
             );
 
             //var optimizationAlgorithm = new NaiveOptimizationAlgorithm(
@@ -53,7 +56,6 @@ namespace CSharpDE
         protected readonly OptimizationParameters _optimizationParameters;
 
         public ImmutableList<Generation> Generations { get; protected set; }
-
         public ImmutableDictionary<Individual, double> FitnessValues { get; protected set; }
 
         protected EvolutionaryAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters)
@@ -62,7 +64,7 @@ namespace CSharpDE
             _optimizationParameters = optimizationParameters;
         }
 
-        // https://en.wikipedia.org/wiki/Evolutionary_algorithm
+        // The comments below are taken from the pseudo code specification in https://en.wikipedia.org/wiki/Evolutionary_algorithm
         public virtual void Optimize()
         {
             // Step One: Generate the initial population of individuals randomly. (First generation)
@@ -72,10 +74,8 @@ namespace CSharpDE
             FitnessValues = Generations.Single().Population.ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
 
             // Step Three: Repeat the following regenerational steps until termination:
-            while (_optimizationParameters.TerminationCriteria?.All(criterion => criterion.ShouldTerminate(this)) ?? false == false)
+            while (_optimizationParameters.TerminationCriteria?.All(criterion => criterion.ShouldTerminate(this) == false) ?? true == true)
             {
-                var bestFitness = FitnessValues.Values.Min();
-
                 // Select the best - fit individuals for reproduction. (Parents)
                 var parents = SelectParents();
 
@@ -105,9 +105,10 @@ namespace CSharpDE
                 FitnessValues = FitnessValues.AddRange(newFitnessValues);
                 Generations = Generations.Add(new Generation(newPopulation.ToImmutableList()));
             }
-
-            throw new NotImplementedException();
         }
+
+        private double FindBestFitnessValue(Generation generation) 
+            => generation.Population.Select(individual => FitnessValues[individual]).Min();
 
         protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, double> offspringFitnessValues)
             => offspringFitnessValues[offsprintIndividual] < offsprintIndividual.Parents.Select(p => FitnessValues[p]).Min();
@@ -129,13 +130,42 @@ namespace CSharpDE
 
     public class OptimizationParameters
     {
-        public int PopulationSize { get; set; }
-        public List<TerminationCriterion> TerminationCriteria { get; set; }
+        public OptimizationParameters(int populationSize, params TerminationCriterion[] terminationCriteria)
+        {
+            PopulationSize = populationSize;
+            TerminationCriteria = terminationCriteria;
+        }
+
+        public int PopulationSize { get; private set; }
+        public IEnumerable<TerminationCriterion> TerminationCriteria { get; private set; }
     }
 
     public abstract class TerminationCriterion
     {
         public abstract bool ShouldTerminate(EvolutionaryAlgorithm optimizationAlgorithm);
+    }
+
+    public class LambdaTerminationCriterion : TerminationCriterion
+    {
+        private readonly Func<EvolutionaryAlgorithm, bool> _shouldTerminate;
+
+        public LambdaTerminationCriterion(Func<EvolutionaryAlgorithm, bool> shouldTerminate)
+        {
+            _shouldTerminate = shouldTerminate;
+        }
+
+        public override bool ShouldTerminate(EvolutionaryAlgorithm optimizationAlgorithm) => _shouldTerminate(optimizationAlgorithm);
+    }
+
+    public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
+    {
+        public DifferentialEvolutionOptimizationParameters(int populationSize, params TerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
+        {
+            if (populationSize < 4)
+            {
+                throw new ArgumentOutOfRangeException(nameof(populationSize), "The population must consist of at least 4 individuals");
+            }
+        }
     }
 
 
@@ -148,7 +178,7 @@ namespace CSharpDE
         private const double CR = 0.5;
         private const double F = 1.0;
 
-        public DifferentialEvolution(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
+        public DifferentialEvolution(OptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
         {
             _random = new Random((int)DateTime.Now.Ticks);
         }
