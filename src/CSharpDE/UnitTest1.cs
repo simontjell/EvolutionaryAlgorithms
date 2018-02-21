@@ -70,8 +70,6 @@ namespace CSharpDE
     {
         private readonly Random _random;
 
-        // TODO: This are parameters - but DE-specific ones...
-
         public DifferentialEvolution(OptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
         {
             _random = new Random((int)DateTime.Now.Ticks);

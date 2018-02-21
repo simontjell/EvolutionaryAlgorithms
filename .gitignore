@@ -1,3 +1,6 @@
 .vs
 **/bin
 **/obj
+.DS_Store
+.idea
+*.userprefs
