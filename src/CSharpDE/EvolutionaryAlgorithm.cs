@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Collections.Immutable;
+using System;
 
 namespace CSharpDE
 {
@@ -56,6 +57,8 @@ namespace CSharpDE
 
                 FitnessValues = FitnessValues.AddRange(newFitnessValues);
                 Generations = Generations.Add(new Generation(newPopulation.ToImmutableList()));
+
+                Console.WriteLine(FitnessValues[GetBestIndividuals(Generations.Last()).Single()].Single());
             }
         }
 
@@ -64,11 +67,35 @@ namespace CSharpDE
         protected abstract bool ShouldContinue();
 
         protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, ImmutableList<double>> offspringFitnessValues)
-        // TODO: Generalize this to a default approach for multi-objective problems
-            => offspringFitnessValues[offsprintIndividual].Single() < offsprintIndividual.Parents.Select(p => FitnessValues[p].Single()).Min();
+            =>
+            GetProblemDimensionality() == 1 ?
+                offspringFitnessValues[offsprintIndividual].Single() < offsprintIndividual.Parents.Select(p => FitnessValues[p].Single()).Min()
+                :
+                throw new NotImplementedException("TODO: Implement for multi-objective problems");
 
         protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents);
         protected abstract ImmutableList<Individual> SelectParents();
+
+        protected virtual int GetProblemDimensionality()
+            => FitnessValues.Values.FirstOrDefault()?.Count ?? throw new NotImplementedException("Find a better way to detect problem dimensionality...");
+
+        public virtual ImmutableList<Individual> GetBestIndividuals(Generation generation)
+        {
+            if (GetProblemDimensionality() == 1)
+            {
+                return 
+                    generation
+                    .Population
+                    .OrderBy(individual => FitnessValues[individual].Single())
+                    .Take(1)
+                    .ToImmutableList();
+            }
+            else
+            {
+                // Pick the lowest Pareto rank
+                throw new NotImplementedException();
+            }
+        }
     }
 
     public abstract class EvolutionaryAlgorithm<TOptimizationParameters> : EvolutionaryAlgorithm where TOptimizationParameters : OptimizationParameters
