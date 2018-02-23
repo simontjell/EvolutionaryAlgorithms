@@ -70,11 +70,29 @@ namespace CSharpDE
             }
             else
             {
-                throw new NotImplementedException("TODO: Implement for multi-objective problems");
+                foreach (var parent in evaluatedOffspringIndividual.Parents)
+                {
+                    var compared = evaluatedOffspringIndividual.FitnessValues.Select(
+                        (fitnessValue, index) =>
+                        new
+                        {
+                            OffspringBetter = fitnessValue < parent.FitnessValues[index],
+                            OffspringBetterOrEqual = fitnessValue <= parent.FitnessValues[index],
+                            ParentBetterOrEqual = fitnessValue >= parent.FitnessValues[index],
+                            ParentBetter = fitnessValue > parent.FitnessValues[index]
+                        }
+                    );
+
+                    if(compared.All(c => c.ParentBetterOrEqual) && compared.Any(c => c.ParentBetter))
+                    {
+                        survivingParentsList.Add(parent);
+                    }
+                }
             }
 
             survivingParents = survivingParentsList.ToImmutableList();
 
+            // Is this generic enough?
             return survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
         }
 
