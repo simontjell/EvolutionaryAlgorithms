@@ -14,7 +14,7 @@ namespace Experiments
                             new MyOptimizationProblem(),
                             new DifferentialEvolutionOptimizationParameters(
                                 100,
-                                new LambdaTerminationCriterion(algorithm => algorithm.Generations.Last().Population.Any(individual => algorithm.FitnessValues[individual].Single() == 0.0))  // TODO: Rethink the interface for getting best fit individual(s)
+                                new LambdaTerminationCriterion(algorithm => algorithm.GetBestIndividuals(algorithm.Generations.Last()).Single().FitnessValues.Single() == 0.0)  // TODO: Rethink the interface for getting best fit individual(s)
                             )
                         );
 

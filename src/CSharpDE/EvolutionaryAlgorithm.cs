@@ -15,16 +15,13 @@ namespace CSharpDE
         }
 
         public ImmutableList<Generation> Generations { get; protected set; }
-        public ImmutableDictionary<Individual, ImmutableList<double>> FitnessValues { get; protected set; }
 
         // The comments below are taken from the pseudo code specification in https://en.wikipedia.org/wiki/Evolutionary_algorithm
         public virtual void Optimize()
         {
             // Step One: Generate the initial population of individuals randomly. (First generation)
-            Generations = new List<Generation> { InitializeFirstGeneration() }.ToImmutableList();
-
             // Step Two: Evaluate the fitness of each individual in that population(time limit, sufficient fitness achieved, etc.)
-            FitnessValues = Generations.Single().Population.ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
+            Generations = new List<Generation> { InitializeFirstGeneration() }.ToImmutableList();
 
             // Step Three: Repeat the following regenerational steps until termination:
             while (ShouldContinue())
@@ -36,57 +33,69 @@ namespace CSharpDE
                 var offspringIndividuals = CreateOffspring(parents);
 
                 // Evaluate the individual fitness of new individuals.
-                var offspringFitnessValues = offspringIndividuals.Cast<Individual>().ToImmutableDictionary(individual => individual, individual => _optimizationProblem.CalculateFitnessValue(individual));
+                var evaluatedOffspringIndividuals = offspringIndividuals.Select(offspringIndividual => new EvaluatedOffspring(offspringIndividual, _optimizationProblem.CalculateFitnessValue(offspringIndividual))).ToImmutableList();
 
                 // Replace least-fit population with new individuals.
-                var newPopulation = new List<Individual>();
-                var newFitnessValues = new List<KeyValuePair<Individual, ImmutableList<double>>>();
+                var newPopulation = new List<EvaluatedIndividual>();
 
-                foreach (var offspringIndividual in offspringIndividuals)
+                foreach (var evaluatedOffspringIndividual in evaluatedOffspringIndividuals)
                 {
-                    if (ShouldReplaceParents(offspringIndividual, offspringFitnessValues))
+                    if (CheckOffspringSurvivalAndGetSurvivingParents(evaluatedOffspringIndividual, out var survivingParents))
                     {
-                        newPopulation.Add(offspringIndividual);
-                        newFitnessValues.Add(new KeyValuePair<Individual, ImmutableList<double>>(offspringIndividual, offspringFitnessValues[offspringIndividual]));
+                        newPopulation.Add(new EvaluatedIndividual(evaluatedOffspringIndividual, evaluatedOffspringIndividual.FitnessValues));
                     }
-                    else
-                    {
-                        newPopulation.AddRange(offspringIndividual.Parents);
-                    }
+
+                    newPopulation.AddRange(survivingParents);
                 }
 
-                FitnessValues = FitnessValues.AddRange(newFitnessValues);
                 Generations = Generations.Add(new Generation(newPopulation.ToImmutableList()));
 
-                Console.WriteLine(FitnessValues[GetBestIndividuals(Generations.Last()).Single()].Single());
+                Console.WriteLine(GetBestIndividuals(Generations.Last()).Single().FitnessValues.Single());
             }
+        }
+
+        protected virtual bool CheckOffspringSurvivalAndGetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual, out ImmutableList<EvaluatedIndividual> survivingParents)
+        {
+            var survivingParentsList = new List<EvaluatedIndividual>();
+
+            if (GetProblemDimensionality() == 1)
+            {
+                foreach (var parent in evaluatedOffspringIndividual.Parents)
+                {
+                    if (parent.FitnessValues.Single() < evaluatedOffspringIndividual.FitnessValues.Single())
+                    {
+                        survivingParentsList.Add(parent);
+                    }
+                }
+            }
+            else
+            {
+                throw new NotImplementedException("TODO: Implement for multi-objective problems");
+            }
+
+            survivingParents = survivingParentsList.ToImmutableList();
+
+            return survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
         }
 
         protected abstract Generation InitializeFirstGeneration();
 
         protected abstract bool ShouldContinue();
 
-        protected virtual bool ShouldReplaceParents(Offspring offsprintIndividual, ImmutableDictionary<Individual, ImmutableList<double>> offspringFitnessValues)
-            =>
-            GetProblemDimensionality() == 1 ?
-                offspringFitnessValues[offsprintIndividual].Single() < offsprintIndividual.Parents.Select(p => FitnessValues[p].Single()).Min()
-                :
-                throw new NotImplementedException("TODO: Implement for multi-objective problems");
-
-        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents);
-        protected abstract ImmutableList<Individual> SelectParents();
+        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<EvaluatedIndividual> parents);    // TODO: Consider making this return EvaluatedOffspring instead
+        protected abstract ImmutableList<EvaluatedIndividual> SelectParents();
 
         protected virtual int GetProblemDimensionality()
-            => FitnessValues.Values.FirstOrDefault()?.Count ?? throw new NotImplementedException("Find a better way to detect problem dimensionality...");
+            => Generations.First().Population.First().FitnessValues.Count;  // TODO: Find a better way to detect problem dimensionality...
 
-        public virtual ImmutableList<Individual> GetBestIndividuals(Generation generation)
+        public virtual ImmutableList<EvaluatedIndividual> GetBestIndividuals(Generation generation)
         {
             if (GetProblemDimensionality() == 1)
             {
                 return 
                     generation
                     .Population
-                    .OrderBy(individual => FitnessValues[individual].Single())
+                    .OrderBy(individual => individual.FitnessValues.Single())
                     .Take(1)
                     .ToImmutableList();
             }
@@ -112,6 +121,7 @@ namespace CSharpDE
             return new Generation(
                 Enumerable.Range(0, _optimizationParameters.PopulationSize)
                 .Select(i => _optimizationProblem.CreateRandomIndividual())
+                .Select(i => new EvaluatedIndividual(i, _optimizationProblem.CalculateFitnessValue(i)))
                 .ToImmutableList()
             );
         }

@@ -4,11 +4,11 @@ namespace CSharpDE
 {
     public class Generation
     {
-        public Generation(ImmutableList<Individual> population)
+        public Generation(ImmutableList<EvaluatedIndividual> population)
         {
             Population = population;
         }
 
-        public ImmutableList<Individual> Population { get; private set; }
+        public ImmutableList<EvaluatedIndividual> Population { get; private set; }
     }
 }

@@ -14,10 +14,10 @@ namespace CSharpDE
             _random = new Random((int)DateTime.Now.Ticks);
         }
 
-        protected override ImmutableList<Individual> SelectParents()
+        protected override ImmutableList<EvaluatedIndividual> SelectParents()
             => Generations.Last().Population;   // Take all...
 
-        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<Individual> parents)
+        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<EvaluatedIndividual> parents)
         {
             var n = parents.First().Genes.Count;
 
