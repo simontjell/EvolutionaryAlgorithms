@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Drawing;
 
 namespace Experiments
 {
@@ -11,22 +12,34 @@ namespace Experiments
     {
         static void Main(string[] args)
         {
+            //Print(
+            //    Enumerable
+            //        .Range(0, 500)
+            //        .Select(i => new PlotPoint { X = i, Y = (decimal)Math.Sin((double)i / 50.0), Color = Color.Yellow })
+            //        .ToList(),
+            //    100, 100
+            //).Save(@"c:\temp\bm1.jpg");
+
+            //return;
+
+
             var optimizationAlgorithm = new DifferentialEvolution(
-                new SphereOptimizationProblem(10),
+                //new SphereOptimizationProblem(10),
+                new SchafferFunctionOptimizationProblem(),
                     new DifferentialEvolutionOptimizationParameters(
                         100,
                         new LambdaTerminationCriterion(algorithm => algorithm.Generations.Count >= 100000)  // TODO: Rethink the interface for getting best fit individual(s)
                     )
                 );
 
-            optimizationAlgorithm.OnGenerationFinished += OptimizationAlgorithm_OnGenerationFinished;
+            optimizationAlgorithm.OnGenerationFinished += (sender, eventArgs) => OptimizationAlgorithm_OnGenerationFinished(sender, eventArgs, true);
 
             optimizationAlgorithm.Optimize();
         }
 
         static ParetoEvaluatedIndividual _bestFitness = null;
 
-        private static void OptimizationAlgorithm_OnGenerationFinished(object sender, EventArgs e)
+        private static void OptimizationAlgorithm_OnGenerationFinished(object sender, EventArgs e, bool isMultiObjective)
         {
             var algo = (sender as DifferentialEvolution);
             var bestFitness = algo.GetBestIndividuals(algo.Generations.Last()).First();
@@ -36,47 +49,60 @@ namespace Experiments
                 Console.WriteLine($"{algo.Generations.Count}: {bestFitness}");
                 _bestFitness = bestFitness;
             }
-            return;
-
 
             var generations = algo.Generations;
-            //            var points = algo.GetBestIndividuals(generations.Last()).Select(i => new PlotPoint { X = i.FitnessValues[0], Y = i.FitnessValues[1], Value = i.ParetoRank }).Where(p => p.Value < 10);
+            var points = 
+                isMultiObjective ? 
+                    algo.GetBestIndividuals(generations.Last()).Select(i => new PlotPoint { X = (decimal)i.FitnessValues[0], Y = (decimal)i.FitnessValues[1], Color = Color.Green })
+                    :
+                    algo.Generations.Select((g, i) => new PlotPoint { X = (decimal)i, Y = (decimal)algo.GetBestIndividuals(g).Single().FitnessValues.Single(), Color = Color.Yellow });
 
-            var points = algo.Generations.Select((g, i) => new PlotPoint { X = (double)i, Y = algo.GetBestIndividuals(g).Single().FitnessValues.Single(), Value = 1 });
-
-            int width = 80, height = 25;
+            int width = 200, height = 200;
             var pixels = Render(points, width, height);
 
-            Print(pixels, width, height);
+            Print(pixels, width, height).Save(@"bin\Debug\netcoreapp2.0\status.jpg");
         }
 
-        private static void Print(int?[] pixels, int width, int height)
-        {
-            Console.Clear();
+        private static Bitmap Print(IEnumerable<PlotPoint> points, int width, int height)
+            => Print(Render(points, width, height), width, height);
 
-            for (var i = 0; i < width * height; i += width)
+        private static Bitmap Print(Color?[,] pixels, int width, int height)
+        {
+            var bitmap = new Bitmap(width, height);
+
+            for (var x = 0; x < width; x++)
             {
-                var line = string.Join(string.Empty, pixels.Skip(i).Take(width).Select(p => p.HasValue ? p.ToString() : "."));
-                Console.WriteLine(line);
+                for(var y = 0; y < height; y++)
+                {
+                    if (pixels[x, y].HasValue)
+                    {
+                        bitmap.SetPixel(x, y, pixels[x, y].Value);
+                    }
+                }
             }
 
-            Thread.Sleep(2000);
+            return bitmap;
         }
 
-        private static int?[] Render(IEnumerable<PlotPoint> points, int width, int height)
+        private static Color?[,] Render(IEnumerable<PlotPoint> points, int width, int height)
         {
-            double maxX = points.Max(p => p.X);
-            double minX = points.Min(p => p.X);
-            double maxY = points.Max(p => p.Y);
-            double minY = points.Min(p => p.Y);
+            decimal maxX = points.Max(p => p.X);
+            decimal minX = points.Min(p => p.X);
+            decimal maxY = points.Max(p => p.Y);
+            decimal minY = points.Min(p => p.Y);
 
-            var pixels = new int?[width * height];
+            var pixels = new Color?[width,height];
             foreach (var point in points)
             {
-                int x = (int)(((((double)point.X - minX)) / (maxX - minX)) * (double)width + 0.5);
-                int y = (int)(((((double)point.Y - minY)) / (maxY - minY)) * (double)height + 0.5);
+                if (maxX - minX == 0 || maxY - minY == 0)
+                {
+                    continue;
+                }
 
-                pixels[x * y] = point.Value + 1;
+                int x = (int)(((((decimal)point.X - minX)) / (maxX - minX)) * (decimal)(width - 1));
+                int y = (int)(((((decimal)point.Y - minY)) / (maxY - minY)) * (decimal)(height - 1));
+
+                pixels[x,y] = point.Color;
             }
 
             return pixels;
@@ -125,11 +151,12 @@ namespace Experiments
 
         private class PlotPoint
         {
-            public double X { get; set; }
-            public double Y { get; set; }
-            public int Value { get; set; }
+            public decimal X { get; set; }
+            public decimal Y { get; set; }
+            public Color Color { get; set; }
 
             public override string ToString() => $"({X} ; {Y})";
         }
+
     }
 }

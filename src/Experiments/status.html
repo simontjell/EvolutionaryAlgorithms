@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <style>
+            body {
+                background-color: black;
+            }
+        </style>
+    </head>
+    <body>
+        <img id="img1"/>
+
+
+        <script>            
+            (function(){
+                document.getElementById("img1").src = "status.jpg?t=" + new Date().getTime();
+                setTimeout(arguments.callee, 1000);
+            })();
+        </script>
+    </body>
+</html>

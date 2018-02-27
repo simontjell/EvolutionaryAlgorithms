@@ -8,10 +8,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Chart.Controls" Version="4.7.2046" />
+    <PackageReference Include="System.Drawing.Common" Version="4.5.0-preview1-26216-02" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CSharpDE\CSharpDE.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="status.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
