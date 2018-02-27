@@ -82,7 +82,9 @@ namespace CSharpDE
         private ImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(ImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
             => paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).ToImmutableList();
 
-        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, ImmutableList<ParetoEvaluatedIndividual> population) => 0.0;   // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
+        // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
+        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, ImmutableList<ParetoEvaluatedIndividual> population) 
+            => population.Select(other => individual.Distance(other)).Min();   
 
         protected int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
             => newPopulation.Aggregate(0, new Func<int, EvaluatedIndividual, int>((paretoRank, other) => paretoRank + (ParetoDominates(other, evaluatedIndividual) ? 1 : 0)));

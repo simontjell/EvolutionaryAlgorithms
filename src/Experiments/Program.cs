@@ -12,17 +12,6 @@ namespace Experiments
     {
         static void Main(string[] args)
         {
-            //Print(
-            //    Enumerable
-            //        .Range(0, 500)
-            //        .Select(i => new PlotPoint { X = i, Y = (decimal)Math.Sin((double)i / 50.0), Color = Color.Yellow })
-            //        .ToList(),
-            //    100, 100
-            //).Save(@"c:\temp\bm1.jpg");
-
-            //return;
-
-
             var optimizationAlgorithm = new DifferentialEvolution(
                 //new SphereOptimizationProblem(10),
                 new SchafferFunctionOptimizationProblem(),
@@ -53,7 +42,15 @@ namespace Experiments
             var generations = algo.Generations;
             var points = 
                 isMultiObjective ? 
-                    algo.GetBestIndividuals(generations.Last()).Select(i => new PlotPoint { X = (decimal)i.FitnessValues[0], Y = (decimal)i.FitnessValues[1], Color = Color.Green })
+                    (
+                        Enumerable.Range(0, 1)
+                        .SelectMany(
+                            rank => 
+                            algo.Generations.Last().Population
+                            .Where(i => i.ParetoRank == rank)
+                            .Select(i => new PlotPoint { X = (decimal)i.FitnessValues[0], Y = (decimal)i.FitnessValues[1], Color = GetRankColor(i.ParetoRank) })
+                        )
+                    )
                     :
                     algo.Generations.Select((g, i) => new PlotPoint { X = (decimal)i, Y = (decimal)algo.GetBestIndividuals(g).Single().FitnessValues.Single(), Color = Color.Yellow });
 
@@ -61,6 +58,21 @@ namespace Experiments
             var pixels = Render(points, width, height);
 
             Print(pixels, width, height).Save(@"bin\Debug\netcoreapp2.0\status.jpg");
+        }
+
+        private static Color GetRankColor(int paretoRank)
+        {
+            switch (paretoRank)
+            {
+                case 0: return Color.Green;
+                case 1: return Color.Yellow;
+                case 2: return Color.Blue;
+                case 3: return Color.Orange;
+                case 4: return Color.Red;
+
+                default:
+                    return Color.White;
+            }
         }
 
         private static Bitmap Print(IEnumerable<PlotPoint> points, int width, int height)
@@ -100,7 +112,7 @@ namespace Experiments
                 }
 
                 int x = (int)(((((decimal)point.X - minX)) / (maxX - minX)) * (decimal)(width - 1));
-                int y = (int)(((((decimal)point.Y - minY)) / (maxY - minY)) * (decimal)(height - 1));
+                int y = height - 1 - (int)(((((decimal)point.Y - minY)) / (maxY - minY)) * (decimal)(height - 1));
 
                 pixels[x,y] = point.Color;
             }
