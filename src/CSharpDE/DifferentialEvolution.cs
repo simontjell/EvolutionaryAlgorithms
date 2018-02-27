@@ -14,10 +14,10 @@ namespace CSharpDE
             _random = new Random((int)DateTime.Now.Ticks);
         }
 
-        protected override ImmutableList<EvaluatedIndividual> SelectParents()
+        protected override ImmutableList<ParetoEvaluatedIndividual> SelectParents()
             => Generations.Last().Population;   // Take all...
 
-        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<EvaluatedIndividual> parents)
+        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents)
         {
             var n = parents.First().Genes.Count;
 
@@ -32,7 +32,7 @@ namespace CSharpDE
 
                         var R = _random.Next(0, n);
 
-                return new Offspring(x, new Individual(x.Genes.Select((xi, i) => _random.NextDouble() < _optimizationParameters.CR || i == R ? a[i] + _optimizationParameters.F * (b[i] - c[i]) : xi).ToArray()));
+                        return new Offspring(x, new Individual(x.Genes.Select((xi, i) => _random.NextDouble() < _optimizationParameters.CR || i == R ? a[i] + _optimizationParameters.F * (b[i] - c[i]) : xi).ToArray()));
                     }
                 )
                 .ToImmutableList();

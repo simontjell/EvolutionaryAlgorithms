@@ -18,14 +18,4 @@ namespace CSharpDE
         }
 
     }
-
-    public class EvaluatedOffspring : Offspring
-    {
-        public ImmutableList<double> FitnessValues { get; private set; }
-
-        public EvaluatedOffspring(Offspring offspring, ImmutableList<double> fitnessValues) : base(offspring.Parents, offspring.Genes.ToArray())
-        {
-            FitnessValues = fitnessValues;
-        }
-    }
 }

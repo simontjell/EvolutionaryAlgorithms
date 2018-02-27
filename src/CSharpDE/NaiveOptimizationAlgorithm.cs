@@ -7,12 +7,12 @@ namespace CSharpDE
     {
         public NaiveOptimizationAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters){ }
 
-        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<EvaluatedIndividual> parents)
+        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents)
             => parents
                .Select(p => new Offspring(p, _optimizationProblem.CreateRandomIndividual()))
                .ToImmutableList();
 
-        protected override ImmutableList<EvaluatedIndividual> SelectParents()
+        protected override ImmutableList<ParetoEvaluatedIndividual> SelectParents()
             => Generations.Last().Population;
     }
 }

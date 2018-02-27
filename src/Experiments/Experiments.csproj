@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Chart.Controls" Version="4.7.2046" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CSharpDE\CSharpDE.csproj" />
   </ItemGroup>
 

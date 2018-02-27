@@ -16,6 +16,8 @@ namespace CSharpDE
 
         public ImmutableList<Generation> Generations { get; protected set; }
 
+        public event EventHandler OnGenerationFinished = null;
+
         // The comments below are taken from the pseudo code specification in https://en.wikipedia.org/wiki/Evolutionary_algorithm
         public virtual void Optimize()
         {
@@ -42,55 +44,66 @@ namespace CSharpDE
                 {
                     if (CheckOffspringSurvivalAndGetSurvivingParents(evaluatedOffspringIndividual, out var survivingParents))
                     {
-                        newPopulation.Add(new EvaluatedIndividual(evaluatedOffspringIndividual, evaluatedOffspringIndividual.FitnessValues));
+                        newPopulation.Add(evaluatedOffspringIndividual.AddFitnessValues(evaluatedOffspringIndividual.FitnessValues));
                     }
 
                     newPopulation.AddRange(survivingParents);
                 }
 
-                Generations = Generations.Add(new Generation(newPopulation.ToImmutableList()));
+                var paretoEvaluated = 
+                    newPopulation
+                    .Select(
+                        evaluatedIndividual => 
+                            evaluatedIndividual
+                            .AddParetoRank(
+                                CalculateParetoRank(evaluatedIndividual, newPopulation))
+                    )
+                    .ToImmutableList();
 
-                Console.WriteLine(GetBestIndividuals(Generations.Last()).Single().FitnessValues.Single());
+                var truncated = TruncatePopulation(paretoEvaluated);
+
+                Generations = Generations.Add(new Generation(truncated));
+
+                //Console.WriteLine(GetBestIndividuals(Generations.Last()).Single().FitnessValues.Single());
+                //Console.WriteLine(
+                //    string.Join(" | ",
+                //        Generations.Last()
+                //        .Population
+                //        .GroupBy(p => p.ParetoRank, (paretoRank, individuals) => new { ParetoRank = paretoRank, Count = individuals.Count() })
+                //        .OrderBy(p => p.ParetoRank)
+                //        .Select(p => $"{p.ParetoRank}: {p.Count}")
+                //    )
+                //);
+
+                OnGenerationFinished?.Invoke(this, null);
             }
+        }
+
+        private ImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(ImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
+            => paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).ToImmutableList();
+
+        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, ImmutableList<ParetoEvaluatedIndividual> population) => 0.0;   // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
+
+        protected int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
+            => newPopulation.Aggregate(0, new Func<int, EvaluatedIndividual, int>((paretoRank, other) => paretoRank + (ParetoDominates(other, evaluatedIndividual) ? 1 : 0)));
+
+        private bool ParetoDominates(IEvaluatedIndividual subject, IEvaluatedIndividual other)
+        {
+            var compared = subject.FitnessValues.Select(
+                (fitnessValue, index) =>
+                new
+                {
+                    SubjectBetter = fitnessValue < other.FitnessValues[index],
+                    SubjectBetterOrEqual = fitnessValue <= other.FitnessValues[index],
+                }
+            );
+
+            return compared.All(c => c.SubjectBetterOrEqual) && compared.Any(c => c.SubjectBetter);
         }
 
         protected virtual bool CheckOffspringSurvivalAndGetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual, out ImmutableList<EvaluatedIndividual> survivingParents)
         {
-            var survivingParentsList = new List<EvaluatedIndividual>();
-
-            if (GetProblemDimensionality() == 1)
-            {
-                foreach (var parent in evaluatedOffspringIndividual.Parents)
-                {
-                    if (parent.FitnessValues.Single() < evaluatedOffspringIndividual.FitnessValues.Single())
-                    {
-                        survivingParentsList.Add(parent);
-                    }
-                }
-            }
-            else
-            {
-                foreach (var parent in evaluatedOffspringIndividual.Parents)
-                {
-                    var compared = evaluatedOffspringIndividual.FitnessValues.Select(
-                        (fitnessValue, index) =>
-                        new
-                        {
-                            OffspringBetter = fitnessValue < parent.FitnessValues[index],
-                            OffspringBetterOrEqual = fitnessValue <= parent.FitnessValues[index],
-                            ParentBetterOrEqual = fitnessValue >= parent.FitnessValues[index],
-                            ParentBetter = fitnessValue > parent.FitnessValues[index]
-                        }
-                    );
-
-                    if(compared.All(c => c.ParentBetterOrEqual) && compared.Any(c => c.ParentBetter))
-                    {
-                        survivingParentsList.Add(parent);
-                    }
-                }
-            }
-
-            survivingParents = survivingParentsList.ToImmutableList();
+            survivingParents = evaluatedOffspringIndividual.Parents.Where(p => ParetoDominates(p, evaluatedOffspringIndividual)).ToImmutableList();
 
             // Is this generic enough?
             return survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
@@ -100,13 +113,13 @@ namespace CSharpDE
 
         protected abstract bool ShouldContinue();
 
-        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<EvaluatedIndividual> parents);    // TODO: Consider making this return EvaluatedOffspring instead
-        protected abstract ImmutableList<EvaluatedIndividual> SelectParents();
+        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents);    // TODO: Consider making this return EvaluatedOffspring instead
+        protected abstract ImmutableList<ParetoEvaluatedIndividual> SelectParents();
 
         protected virtual int GetProblemDimensionality()
             => Generations.First().Population.First().FitnessValues.Count;  // TODO: Find a better way to detect problem dimensionality...
 
-        public virtual ImmutableList<EvaluatedIndividual> GetBestIndividuals(Generation generation)
+        public virtual ImmutableList<ParetoEvaluatedIndividual> GetBestIndividuals(Generation generation)
         {
             if (GetProblemDimensionality() == 1)
             {
@@ -119,8 +132,8 @@ namespace CSharpDE
             }
             else
             {
-                // Pick the lowest Pareto rank
-                throw new NotImplementedException();
+                var lowestParetoRank = generation.Population.Min(i => i.ParetoRank);
+                return generation.Population.Where(i => i.ParetoRank == lowestParetoRank).ToImmutableList();
             }
         }
     }
@@ -136,10 +149,14 @@ namespace CSharpDE
 
         protected override Generation InitializeFirstGeneration()
         {
-            return new Generation(
-                Enumerable.Range(0, _optimizationParameters.PopulationSize)
+            var evaluated = Enumerable.Range(0, _optimizationParameters.PopulationSize)
                 .Select(i => _optimizationProblem.CreateRandomIndividual())
-                .Select(i => new EvaluatedIndividual(i, _optimizationProblem.CalculateFitnessValue(i)))
+                .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValue(i)))
+                .ToImmutableList();
+
+            return new Generation(
+                evaluated
+                .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValue(i)).AddParetoRank(CalculateParetoRank(i, evaluated)))
                 .ToImmutableList()
             );
         }
