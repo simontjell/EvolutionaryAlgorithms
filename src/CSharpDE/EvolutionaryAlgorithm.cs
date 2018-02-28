@@ -42,7 +42,9 @@ namespace CSharpDE
 
                 foreach (var evaluatedOffspringIndividual in evaluatedOffspringIndividuals)
                 {
-                    if (CheckOffspringSurvivalAndGetSurvivingParents(evaluatedOffspringIndividual, out var survivingParents))
+                    var survivingParents = GetSurvivingParents(evaluatedOffspringIndividual);
+
+                    if (ShouldOffspringSurvive(evaluatedOffspringIndividual, survivingParents))
                     {
                         newPopulation.Add(evaluatedOffspringIndividual.AddFitnessValues(evaluatedOffspringIndividual.FitnessValues));
                     }
@@ -64,52 +66,25 @@ namespace CSharpDE
 
                 Generations = Generations.Add(new Generation(truncated));
 
-                //Console.WriteLine(GetBestIndividuals(Generations.Last()).Single().FitnessValues.Single());
-                //Console.WriteLine(
-                //    string.Join(" | ",
-                //        Generations.Last()
-                //        .Population
-                //        .GroupBy(p => p.ParetoRank, (paretoRank, individuals) => new { ParetoRank = paretoRank, Count = individuals.Count() })
-                //        .OrderBy(p => p.ParetoRank)
-                //        .Select(p => $"{p.ParetoRank}: {p.Count}")
-                //    )
-                //);
-
                 OnGenerationFinished?.Invoke(this, null);
             }
         }
+
+        protected virtual bool ShouldOffspringSurvive(EvaluatedOffspring evaluatedOffspringIndividual, ImmutableList<EvaluatedIndividual> survivingParents)
+            => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
 
         private ImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(ImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
             => paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).ToImmutableList();
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
         protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, ImmutableList<ParetoEvaluatedIndividual> population) 
-            => population.Where(other => other.ParetoRank == individual.ParetoRank).Select(other => individual.Distance(other)).Min();   
+            => population.Where(other => other.ParetoRank == individual.ParetoRank).Select(individual.Distance).Min();   
 
         protected int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
-            => newPopulation.Aggregate(0, new Func<int, EvaluatedIndividual, int>((paretoRank, other) => paretoRank + (ParetoDominates(other, evaluatedIndividual) ? 1 : 0)));
+            => newPopulation.Count(evaluatedIndividual.IsParetoDominatedBy);
 
-        private bool ParetoDominates(IEvaluatedIndividual subject, IEvaluatedIndividual other)
-        {
-            var compared = subject.FitnessValues.Select(
-                (fitnessValue, index) =>
-                new
-                {
-                    SubjectBetter = fitnessValue < other.FitnessValues[index],
-                    SubjectBetterOrEqual = fitnessValue <= other.FitnessValues[index],
-                }
-            );
-
-            return compared.All(c => c.SubjectBetterOrEqual) && compared.Any(c => c.SubjectBetter);
-        }
-
-        protected virtual bool CheckOffspringSurvivalAndGetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual, out ImmutableList<EvaluatedIndividual> survivingParents)
-        {
-            survivingParents = evaluatedOffspringIndividual.Parents.Where(p => ParetoDominates(p, evaluatedOffspringIndividual)).ToImmutableList();
-
-            // Is this generic enough?
-            return survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
-        }
+        protected virtual ImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
+            => evaluatedOffspringIndividual.Parents.Where(evaluatedOffspringIndividual.IsParetoDominatedBy).ToImmutableList();
 
         protected abstract Generation InitializeFirstGeneration();
 
