@@ -16,8 +16,8 @@ namespace Experiments
                 //new SphereOptimizationProblem(10),
                 new SchafferFunctionOptimizationProblem(),
                     new DifferentialEvolutionOptimizationParameters(
-                        100,
-                        new LambdaTerminationCriterion(algorithm => algorithm.Generations.Count >= 100000)  // TODO: Rethink the interface for getting best fit individual(s)
+                        1000,
+                        new GenerationCountTerminationCriterion(100000)
                     )
                 );
 
