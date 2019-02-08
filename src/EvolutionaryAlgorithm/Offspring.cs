@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Immutable;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA
 {
     public class Offspring : Individual
     {

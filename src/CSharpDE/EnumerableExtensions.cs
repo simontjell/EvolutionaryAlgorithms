@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA.DE
 {
     public static class EnumerableExtensions
     {

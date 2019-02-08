@@ -9,13 +9,15 @@
     <PackageReference Include="System.Drawing.Common" Version="4.5.0-preview1-26216-02" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CSharpDE\CSharpDE.csproj" />
-    <ProjectReference Include="..\EvolutionaryAlgorithm\EvolutionaryAlgorithm.csproj">
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Update="status.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="OptimizationProblems\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpDE\DifferentialEvolution.csproj" />
+    <ProjectReference Include="..\EvolutionaryAlgorithm\EvolutionaryAlgorithm.csproj" />
   </ItemGroup>
 </Project>

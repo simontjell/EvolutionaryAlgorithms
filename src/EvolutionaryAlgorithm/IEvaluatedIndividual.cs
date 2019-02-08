@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA
 {
     public interface IEvaluatedIndividual
     {

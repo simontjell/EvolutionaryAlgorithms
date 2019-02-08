@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA.DE
 {
     public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
     {

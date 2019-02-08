@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Immutable;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA.DE
 {
     // https://en.wikipedia.org/wiki/Differential_evolution
     public class DifferentialEvolution : EvolutionaryAlgorithm<DifferentialEvolutionOptimizationParameters>

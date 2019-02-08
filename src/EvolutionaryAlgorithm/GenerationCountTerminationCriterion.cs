@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA
 {
     public class GenerationCountTerminationCriterion : TerminationCriterion
     {

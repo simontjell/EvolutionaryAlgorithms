@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Immutable;
 using System;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA
 {
     public abstract class EvolutionaryAlgorithm
     {

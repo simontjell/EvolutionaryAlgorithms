@@ -1,4 +1,4 @@
-﻿namespace CSharpDE
+﻿namespace SimpleSystemer.EA
 {
     public class ParetoEvaluatedIndividual : EvaluatedIndividual
     {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 
-namespace CSharpDE
+namespace SimpleSystemer.EA
 {
     public class EvaluatedIndividual : Individual, IEvaluatedIndividual
     {

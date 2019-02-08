@@ -1,4 +1,4 @@
-﻿namespace CSharpDE
+﻿namespace SimpleSystemer.EA
 {
     public abstract class TerminationCriterion
     {
