@@ -6,14 +6,14 @@ namespace CSharpDE
 {
     public class NaiveOptimizationAlgorithm : EvolutionaryAlgorithm<OptimizationParameters>
     {
-        public NaiveOptimizationAlgorithm(OptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters){ }
+        public NaiveOptimizationAlgorithm(IOptimizationProblem optimizationProblem, OptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters){ }
 
-        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents)
+        protected override IImmutableList<Offspring> CreateOffspring(IImmutableList<ParetoEvaluatedIndividual> parents)
             => parents
                .Select(p => new Offspring(p, _optimizationProblem.CreateRandomIndividual()))
                .ToImmutableList();
 
-        protected override ImmutableList<ParetoEvaluatedIndividual> SelectParents()
+        protected override IImmutableList<ParetoEvaluatedIndividual> SelectParents()
             => Generations.Last().Population;
     }
 }

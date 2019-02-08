@@ -2,7 +2,7 @@
 
 namespace SimpleSystemer.EA
 {
-    public abstract class OptimizationProblem
+    public abstract class OptimizationProblem : IOptimizationProblem
     {
         public abstract ImmutableList<double> CalculateFitnessValue(Individual individual);
         public abstract Individual CreateRandomIndividual();

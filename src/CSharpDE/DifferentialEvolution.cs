@@ -9,7 +9,7 @@ namespace SimpleSystemer.EA.DE
     {
         private readonly Random _random;
 
-        public DifferentialEvolution(OptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
+        public DifferentialEvolution(IOptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
         {
             _random = new Random((int)DateTime.Now.Ticks);
         }

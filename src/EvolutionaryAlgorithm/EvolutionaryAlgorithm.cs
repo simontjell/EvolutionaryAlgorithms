@@ -5,11 +5,11 @@ using System;
 
 namespace SimpleSystemer.EA
 {
-    public abstract class EvolutionaryAlgorithm
+    public abstract class EvolutionaryAlgorithm : IEvolutionaryAlgorithm
     {
-        protected readonly OptimizationProblem _optimizationProblem;
+        protected readonly IOptimizationProblem _optimizationProblem;
 
-        public EvolutionaryAlgorithm(OptimizationProblem optimizationProblem)
+        public EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem)
         {
             _optimizationProblem = optimizationProblem;
         }
@@ -119,7 +119,7 @@ namespace SimpleSystemer.EA
     {
         protected readonly TOptimizationParameters _optimizationParameters;
 
-        protected EvolutionaryAlgorithm(OptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters) : base(optimizationProblem)
+        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters) : base(optimizationProblem)
         {
             _optimizationParameters = optimizationParameters;
         }

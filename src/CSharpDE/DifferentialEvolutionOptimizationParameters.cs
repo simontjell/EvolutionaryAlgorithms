@@ -1,4 +1,5 @@
 ﻿using System;
+using SimpleSystemer.EA.TerminationCriteria;
 
 namespace SimpleSystemer.EA.DE
 {
@@ -7,7 +8,7 @@ namespace SimpleSystemer.EA.DE
         public double CR { get; private set; } = 0.5;
         public double F { get; private set; } = 1.0;
 
-        public DifferentialEvolutionOptimizationParameters(int populationSize, params TerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
+        public DifferentialEvolutionOptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
         {
             if (populationSize < 4)
             {

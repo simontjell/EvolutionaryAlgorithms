@@ -7,6 +7,7 @@ using System.Threading;
 using System.Drawing;
 using SimpleSystemer.EA;
 using Experiments.OptimizationProblems;
+using SimpleSystemer.EA.TerminationCriteria;
 
 namespace Experiments
 {
