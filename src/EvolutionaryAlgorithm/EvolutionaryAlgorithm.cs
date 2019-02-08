@@ -14,7 +14,7 @@ namespace SimpleSystemer.EA
             _optimizationProblem = optimizationProblem;
         }
 
-        public ImmutableList<Generation> Generations { get; protected set; }
+        public IImmutableList<Generation> Generations { get; protected set; }
 
         public event EventHandler OnGenerationFinished = null;
 
@@ -70,33 +70,33 @@ namespace SimpleSystemer.EA
             }
         }
 
-        protected virtual bool ShouldOffspringSurvive(EvaluatedOffspring evaluatedOffspringIndividual, ImmutableList<EvaluatedIndividual> survivingParents)
+        protected virtual bool ShouldOffspringSurvive(EvaluatedOffspring evaluatedOffspringIndividual, IImmutableList<EvaluatedIndividual> survivingParents)
             => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
 
-        private ImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(ImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
+        private IImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(IImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
             => paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).ToImmutableList();
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
-        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, ImmutableList<ParetoEvaluatedIndividual> population) 
+        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
             => population.Where(other => other.ParetoRank == individual.ParetoRank).Select(individual.Distance).Min();   
 
         protected int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
             => newPopulation.Count(evaluatedIndividual.IsParetoDominatedBy);
 
-        protected virtual ImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
+        protected virtual IImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
             => evaluatedOffspringIndividual.Parents.Where(evaluatedOffspringIndividual.IsParetoDominatedBy).ToImmutableList();
 
         protected abstract Generation InitializeFirstGeneration();
 
         protected abstract bool ShouldContinue();
 
-        protected abstract ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents);    // TODO: Consider making this return EvaluatedOffspring instead
-        protected abstract ImmutableList<ParetoEvaluatedIndividual> SelectParents();
+        protected abstract IImmutableList<Offspring> CreateOffspring(IImmutableList<ParetoEvaluatedIndividual> parents);    // TODO: Consider making this return EvaluatedOffspring instead
+        protected abstract IImmutableList<ParetoEvaluatedIndividual> SelectParents();
 
         protected virtual int GetProblemDimensionality()
             => Generations.First().Population.First().FitnessValues.Count;  // TODO: Find a better way to detect problem dimensionality...
 
-        public virtual ImmutableList<ParetoEvaluatedIndividual> GetBestIndividuals(Generation generation)
+        public virtual IImmutableList<ParetoEvaluatedIndividual> GetBestIndividuals(Generation generation)
         {
             if (GetProblemDimensionality() == 1)
             {

@@ -14,10 +14,10 @@ namespace SimpleSystemer.EA.DE
             _random = new Random((int)DateTime.Now.Ticks);
         }
 
-        protected override ImmutableList<ParetoEvaluatedIndividual> SelectParents()
+        protected override IImmutableList<ParetoEvaluatedIndividual> SelectParents()
             => Generations.Last().Population;   // Take all...
 
-        protected override ImmutableList<Offspring> CreateOffspring(ImmutableList<ParetoEvaluatedIndividual> parents)
+        protected override IImmutableList<Offspring> CreateOffspring(IImmutableList<ParetoEvaluatedIndividual> parents)
         {
             var n = parents.First().Genes.Count;
 

@@ -4,11 +4,11 @@ namespace SimpleSystemer.EA
 {
     public class Generation
     {
-        public Generation(ImmutableList<ParetoEvaluatedIndividual> population)
+        public Generation(IImmutableList<ParetoEvaluatedIndividual> population)
         {
             Population = population;
         }
 
-        public ImmutableList<ParetoEvaluatedIndividual> Population { get; }
+        public IImmutableList<ParetoEvaluatedIndividual> Population { get; }
     }
 }
