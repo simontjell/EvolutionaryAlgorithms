@@ -11,22 +11,16 @@ namespace Experiments.OptimizationProblems
         private readonly Random _rnd;
 
         public SchafferFunctionOptimizationProblem()
-        {
-            _rnd = new Random((int)DateTime.Now.Ticks);
-        }
+            => _rnd = new Random((int)DateTime.Now.Ticks);
 
-        public override ImmutableList<double> CalculateFitnessValue(Individual individual)
-        {
-            return new List<double> {
+        public override ImmutableList<double> CalculateFitnessValues(Individual individual)
+            => new List<double> {
                 Math.Pow(individual[0], 2.0),
                 Math.Pow(individual[0] - 2, 2.0)
             }.ToImmutableList();
-        }
 
         public override Individual CreateRandomIndividual()
-        {
-            return new Individual(_rnd.NextDouble() * 10.0, _rnd.NextDouble() * 10.0);
-        }
+            => new Individual(_rnd.NextDouble() * 10.0, _rnd.NextDouble() * 10.0);
     }
 
 }

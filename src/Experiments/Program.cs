@@ -16,11 +16,11 @@ namespace Experiments
         static void Main(string[] args)
         {
             var optimizationAlgorithm = new DifferentialEvolution(
-                new SphereOptimizationProblem(3),
+                new RosenbrockOptimizationProblem(3),
                 //new SchafferFunctionOptimizationProblem(),
                 new DifferentialEvolutionOptimizationParameters(
                     100,
-                    new GenerationCountTerminationCriterion(100000)
+                    new GenerationCountTerminationCriterion(5000)
                 )
             );
 

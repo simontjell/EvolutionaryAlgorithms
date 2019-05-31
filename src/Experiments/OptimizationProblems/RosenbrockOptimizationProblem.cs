@@ -7,19 +7,31 @@ using SimpleSystemer.EA;
 namespace Experiments.OptimizationProblems
 {
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
-    public class SphereOptimizationProblem : OptimizationProblem
+    public class RosenbrockOptimizationProblem : OptimizationProblem
     {
         private readonly Random _rnd;
         private readonly int _n;
 
-        public SphereOptimizationProblem(int n)
+        public RosenbrockOptimizationProblem(int n)
         {
+            if(n < 2)
+            {
+                throw new ArgumentOutOfRangeException("n must be at least 2");
+            }
             _rnd = new Random((int)DateTime.Now.Ticks);
             _n = n;
         }
 
         public override ImmutableList<double> CalculateFitnessValues(Individual individual) 
-            => new List<double> { individual.Genes.Sum(g => Math.Pow(g, 2.0)) }.ToImmutableList();
+            => new List<double> { 
+                Enumerable
+                .Range(0, _n-1)
+                .Select(i => 
+                    100.0*Math.Pow((individual.Genes[i+1]-Math.Pow(individual.Genes[i], 2.0)), 2.0) 
+                    + Math.Pow(1.0-individual.Genes[i], 2.0)
+                )
+                .Sum()
+            }.ToImmutableList();
         public override Individual CreateRandomIndividual() 
             => new Individual(Enumerable.Range(0, _n).Select(i => _rnd.NextDouble()).ToArray());
     }
