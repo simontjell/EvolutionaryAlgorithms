@@ -10,7 +10,7 @@ namespace Experiments.OptimizationProblems
     {
         private readonly Random _rnd;
 
-        public SchafferFunctionOptimizationProblem()
+        public SchafferFunctionOptimizationProblem() : base(2)
             => _rnd = new Random((int)DateTime.Now.Ticks);
 
         public override ImmutableList<double> CalculateFitnessValues(Individual individual)

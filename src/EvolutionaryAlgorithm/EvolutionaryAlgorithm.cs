@@ -35,7 +35,7 @@ namespace SimpleSystemer.EA
                 var offspringIndividuals = CreateOffspring(parents);
 
                 // Evaluate the individual fitness of new individuals.
-                var evaluatedOffspringIndividuals = offspringIndividuals.Select(offspringIndividual => new EvaluatedOffspring(offspringIndividual, _optimizationProblem.CalculateFitnessValue(offspringIndividual))).ToImmutableList();
+                var evaluatedOffspringIndividuals = offspringIndividuals.Select(offspringIndividual => new EvaluatedOffspring(offspringIndividual, _optimizationProblem.CalculateFitnessValues(offspringIndividual))).ToImmutableList();
 
                 // Replace least-fit population with new individuals.
                 var newPopulation = new List<EvaluatedIndividual>();
@@ -128,12 +128,12 @@ namespace SimpleSystemer.EA
         {
             var evaluated = Enumerable.Range(0, _optimizationParameters.PopulationSize)
                 .Select(i => _optimizationProblem.CreateRandomIndividual())
-                .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValue(i)))
+                .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValues(i)))
                 .ToImmutableList();
 
             return new Generation(
                 evaluated
-                .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValue(i)).AddParetoRank(CalculateParetoRank(i, evaluated)))
+                .Select(i => i.AddParetoRank(CalculateParetoRank(i, evaluated)))
                 .ToImmutableList()
             );
         }

@@ -12,14 +12,12 @@ namespace Experiments.OptimizationProblems
         private readonly Random _rnd;
         private readonly int _n;
 
-        public RosenbrockOptimizationProblem(int n)
+        public RosenbrockOptimizationProblem(int n) : base(n)
         {
             if(n < 2)
             {
                 throw new ArgumentOutOfRangeException("n must be at least 2");
             }
-            _rnd = new Random((int)DateTime.Now.Ticks);
-            _n = n;
         }
 
         public override ImmutableList<double> CalculateFitnessValues(Individual individual) 

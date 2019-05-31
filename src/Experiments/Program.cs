@@ -16,7 +16,7 @@ namespace Experiments
         static void Main(string[] args)
         {
             var optimizationAlgorithm = new DifferentialEvolution(
-                new RosenbrockOptimizationProblem(3),
+                new BoothOptimizationProblem(),
                 //new SchafferFunctionOptimizationProblem(),
                 new DifferentialEvolutionOptimizationParameters(
                     100,

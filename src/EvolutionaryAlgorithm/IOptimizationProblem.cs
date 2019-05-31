@@ -4,7 +4,7 @@ namespace SimpleSystemer.EA
 {
     public interface IOptimizationProblem
     {
-        ImmutableList<double> CalculateFitnessValue(Individual individual);
+        ImmutableList<double> CalculateFitnessValues(Individual individual);
         Individual CreateRandomIndividual();
         bool IsFeasible(Individual individual);
     }

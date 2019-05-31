@@ -7,13 +7,14 @@ using SimpleSystemer.EA;
 namespace Experiments.OptimizationProblems
 {
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
-    public class SphereOptimizationProblem : OptimizationProblem
+    public class BoothOptimizationProblem : OptimizationProblem
     {
-        public SphereOptimizationProblem(int n) : base(n) {}
+        public BoothOptimizationProblem() : base(2) { }
 
         public override ImmutableList<double> CalculateFitnessValues(Individual individual) 
-            => new List<double> { individual.Genes.Sum(g => Math.Pow(g, 2.0)) }.ToImmutableList();
-        public override Individual CreateRandomIndividual() 
-            => new Individual(Enumerable.Range(0, _n).Select(i => _rnd.NextDouble()).ToArray());
+            => new List<double> { CalculateFitnessValue(individual.Genes[0], individual.Genes[1]) }.ToImmutableList();
+
+        private double CalculateFitnessValue(double x, double y)
+            => Math.Pow(x+2.0*y-7.0, 2.0) + Math.Pow(2.0*x+y-5.0, 2.0);
     }
 }
