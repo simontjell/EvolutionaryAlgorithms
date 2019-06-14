@@ -17,6 +17,12 @@ namespace Experiments
         {
             public DateTimeOffset Time { get; set; }
             public double Value { get; set; }
+
+            public Observation(DateTimeOffset time, double value)
+            {
+                Time = time;
+                Value = value;
+            }
         }
 
         public class NormalizedObservation
@@ -32,6 +38,7 @@ namespace Experiments
             {
                 Days = observations.GroupBy(o => o.Time.Date).Select((day, index) => new Day(day.ToList(), index, this)).ToList();
             }
+
         }
 
         public class Day
@@ -39,15 +46,44 @@ namespace Experiments
             private readonly Period _parentPeriod;
             public int _parentIndex { get; }
 
-            private readonly IList<NormalizedObservation> _normalizedObservations;
+            private readonly NormalizedCollection _normalizedObservations;
 
             public Day Previous => _parentIndex == 0? null : _parentPeriod.Days[_parentIndex - 1];
+
+
+            public Day(List<Observation> observations, int index, Period parentPeriod)
+            {
+                Observations = observations;
+                _parentPeriod = parentPeriod;
+                _parentIndex = index;
+                _normalizedObservations = Normalizer.Instance.Normalize(Observations);
+            }
+
+
+
+            public IList<Observation> Observations { get; }
+
+            public override string ToString()
+                => Observations.First().Time.Date.ToShortDateString();
+        }
+
+        public class NormalizedCollection
+        {
+            private List<NormalizedObservation> _normalizedObservations;
+
+            public NormalizedCollection(List<NormalizedObservation> normalizedObservations)
+            {
+                _normalizedObservations = normalizedObservations;
+            }
 
             public NormalizedObservation this[double index]
                 =>
                     ValidateIndex(index) ??
                     Interpolate(
-                        _normalizedObservations.Zip(_normalizedObservations.Skip(1), (before, after) => (before, after)).Single(beforeAfter => beforeAfter.before.Time <= index && beforeAfter.after.Time >= index),
+                        _normalizedObservations.Zip(
+                            _normalizedObservations.Skip(1),(arg1, arg2) => (arg1, arg2)
+                        )
+                        .First(((NormalizedObservation before, NormalizedObservation after) arg) => arg.before.Time <= index && arg.after.Time >= index),
                         index
                     );
 
@@ -55,20 +91,16 @@ namespace Experiments
                 => index >= 0.0 && index <= 1.0 ? (NormalizedObservation)null : throw new ArgumentOutOfRangeException(nameof(index));
 
             private NormalizedObservation Interpolate((NormalizedObservation before, NormalizedObservation after) beforeAfter, double index)
-            {
-                throw new NotImplementedException();
-            }
+                => new NormalizedObservation { Time = index, Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value };
 
-            public Day(List<Observation> observations, int index, Period parentPeriod)
-            {
-                Observations = observations;
-                _parentPeriod = parentPeriod;
-                _parentIndex = index;
-                _normalizedObservations = Normalize(Observations);
-            }
+        }
+        public class Normalizer
+        {
 
-            private IList<NormalizedObservation> Normalize(IList<Observation> observations)
-                => Normalize(observations.Select(o => o.Time)).Zip(Normalize(observations.Select(o => o.Value)), (time, value) => new NormalizedObservation { Time = time, Value = value }).OrderBy(o => o.Time).ToList();
+            public NormalizedCollection Normalize(IList<Observation> observations)
+                => new NormalizedCollection(
+                    Normalize(observations.Select(o => o.Time)).Zip(Normalize(observations.Select(o => o.Value)), (time, value) => new NormalizedObservation { Time = time, Value = value }).OrderBy(o => o.Time).ToList()
+                );
 
             private IEnumerable<double> Normalize(IEnumerable<DateTimeOffset> timestamps)
                 => Normalize(timestamps.Select(t => (double)t.UtcTicks));
@@ -81,18 +113,25 @@ namespace Experiments
                 return values.Select(v => (v - min) / range);
             }
 
-            public IList<Observation> Observations { get; }
-
-            public override string ToString()
-                => Observations.First().Time.Date.ToShortDateString();
+            public static Normalizer Instance { get; } = new Normalizer();
         }
 
         static void Main(string[] args)
         {
             var period =
                 new Period(
-                    Enumerable.Range(1, 1000).Select(i => new Observation { Time = new DateTime(1977, 1, 1).AddHours(i), Value = Math.Sin(i / 1.234) })
+                    Enumerable.Range(1, 1000).Select(i => new Observation(new DateTime(1977, 1, 1).AddHours(i), Math.Sin(i / 1.234) ))
                 );
+
+            var normalized = Normalizer.Instance.Normalize(
+                new List<Observation> {
+                    new Observation(new DateTime(1977,1,1), 100.0),
+                    new Observation(new DateTime(1977,1,2), 120.0),
+                    new Observation(new DateTime(1977,1,3), 200.0),
+                }
+            );
+
+            var value = normalized[0.75];
 
             var optimizationAlgorithm = new DifferentialEvolution(
                 new BoothOptimizationProblem(),
