@@ -11,121 +11,16 @@ using SimpleSystemer.EA.TerminationCriteria;
 
 namespace Experiments
 {
-    partial class Program
+
+    public class Program
     {
-        public class Observation
-        {
-            public DateTimeOffset Time { get; set; }
-            public double Value { get; set; }
-
-            public Observation(DateTimeOffset time, double value)
-            {
-                Time = time;
-                Value = value;
-            }
-        }
-
-        public class NormalizedObservation
-        {
-            public double Time { get; set; }
-            public double Value { get; set; }
-            public Observation Original { get; internal set; }
-        }
-        public class Period
-        {
-            public IList<Day> Days { get; }
-
-            public Period(IEnumerable<Observation> observations)
-            {
-                Days = observations.GroupBy(o => o.Time.Date).Select((day, index) => new Day(day.ToList(), index, this)).ToList();
-            }
-
-        }
-
-        public class Day
-        {
-            private readonly Period _parentPeriod;
-            public int _parentIndex { get; }
-
-            public NormalizedCollection NormalizedObservations { get; }
-
-            public Day Previous => _parentIndex == 0? null : _parentPeriod.Days[_parentIndex - 1];
-
-
-            public Day(List<Observation> observations, int index, Period parentPeriod)
-            {
-                Observations = observations;
-                _parentPeriod = parentPeriod;
-                _parentIndex = index;
-                NormalizedObservations = Normalizer.Instance.Normalize(Observations);
-            }
-
-
-
-            public IList<Observation> Observations { get; }
-
-            public override string ToString()
-                => Observations.First().Time.Date.ToShortDateString();
-        }
-
-        public class NormalizedCollection
-        {
-            private List<NormalizedObservation> _normalizedObservations;
-
-            public NormalizedCollection(List<NormalizedObservation> normalizedObservations)
-            {
-                _normalizedObservations = normalizedObservations;
-            }
-
-            public NormalizedObservation this[double index]
-                =>
-                    ValidateIndex(index) ??
-                    Interpolate(
-                        _normalizedObservations.Zip(
-                            _normalizedObservations.Skip(1),(arg1, arg2) => (arg1, arg2)
-                        )
-                        .First(((NormalizedObservation before, NormalizedObservation after) arg) => arg.before.Time <= index && arg.after.Time >= index),
-                        index
-                    );
-
-            private NormalizedObservation ValidateIndex(double index)
-                => index >= 0.0 && index <= 1.0 ? (NormalizedObservation)null : throw new ArgumentOutOfRangeException(nameof(index));
-
-            private NormalizedObservation Interpolate((NormalizedObservation before, NormalizedObservation after) beforeAfter, double index)
-                => new NormalizedObservation { Time = index, Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value };
-
-        }
-
-        public class Normalizer
-        {
-
-            public NormalizedCollection Normalize(IList<Observation> observations)
-                => new NormalizedCollection(
-                    observations.Zip(
-                        Normalize(observations.Select(o => o.Time)).Zip(Normalize(observations.Select(o => o.Value)), (time, value) => (time, value)),
-                        (original, normalized) => new NormalizedObservation { Time = normalized.time, Value = normalized.value, Original = original }
-                    ).OrderBy(o => o.Time).ToList()    
-                );
-
-            private IEnumerable<double> Normalize(IEnumerable<DateTimeOffset> timestamps)
-                => Normalize(timestamps.Select(t => (double)t.UtcTicks));
-
-            private IEnumerable<double> Normalize(IEnumerable<double> values)
-            {
-                var (min, max) = (values.Min(), values.Max());
-                var range = max - min;
-
-                return values.Select(v => (v - min) / range);
-            }
-
-            public static Normalizer Instance { get; } = new Normalizer();
-        }
+        
 
         static void Main(string[] args)
         {
             var period =
                 new Period(
-                        new List<Observation> {
+                    new List<Observation> {
                         new Observation(new DateTime(1977,1,1).AddHours(1), 100.0),
                         new Observation(new DateTime(1977,1,1).AddHours(2), 120.0),
                         new Observation(new DateTime(1977,1,1).AddHours(3), 200.0),
