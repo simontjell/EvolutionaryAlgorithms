@@ -29,6 +29,7 @@ namespace Experiments
         {
             public double Time { get; set; }
             public double Value { get; set; }
+            public Observation Original { get; internal set; }
         }
         public class Period
         {
@@ -46,7 +47,7 @@ namespace Experiments
             private readonly Period _parentPeriod;
             public int _parentIndex { get; }
 
-            private readonly NormalizedCollection _normalizedObservations;
+            public NormalizedCollection NormalizedObservations { get; }
 
             public Day Previous => _parentIndex == 0? null : _parentPeriod.Days[_parentIndex - 1];
 
@@ -56,7 +57,7 @@ namespace Experiments
                 Observations = observations;
                 _parentPeriod = parentPeriod;
                 _parentIndex = index;
-                _normalizedObservations = Normalizer.Instance.Normalize(Observations);
+                NormalizedObservations = Normalizer.Instance.Normalize(Observations);
             }
 
 
@@ -94,12 +95,16 @@ namespace Experiments
                 => new NormalizedObservation { Time = index, Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value };
 
         }
+
         public class Normalizer
         {
 
             public NormalizedCollection Normalize(IList<Observation> observations)
                 => new NormalizedCollection(
-                    Normalize(observations.Select(o => o.Time)).Zip(Normalize(observations.Select(o => o.Value)), (time, value) => new NormalizedObservation { Time = time, Value = value }).OrderBy(o => o.Time).ToList()
+                    observations.Zip(
+                        Normalize(observations.Select(o => o.Time)).Zip(Normalize(observations.Select(o => o.Value)), (time, value) => (time, value)),
+                        (original, normalized) => new NormalizedObservation { Time = normalized.time, Value = normalized.value, Original = original }
+                    ).OrderBy(o => o.Time).ToList()    
                 );
 
             private IEnumerable<double> Normalize(IEnumerable<DateTimeOffset> timestamps)
@@ -120,18 +125,16 @@ namespace Experiments
         {
             var period =
                 new Period(
-                    Enumerable.Range(1, 1000).Select(i => new Observation(new DateTime(1977, 1, 1).AddHours(i), Math.Sin(i / 1.234) ))
+                        new List<Observation> {
+                        new Observation(new DateTime(1977,1,1).AddHours(1), 100.0),
+                        new Observation(new DateTime(1977,1,1).AddHours(2), 120.0),
+                        new Observation(new DateTime(1977,1,1).AddHours(3), 200.0),
+                    }
                 );
 
-            var normalized = Normalizer.Instance.Normalize(
-                new List<Observation> {
-                    new Observation(new DateTime(1977,1,1), 100.0),
-                    new Observation(new DateTime(1977,1,2), 120.0),
-                    new Observation(new DateTime(1977,1,3), 200.0),
-                }
-            );
 
-            var value = normalized[0.75];
+
+            var value = period.Days[0].NormalizedObservations[0.75];
 
             var optimizationAlgorithm = new DifferentialEvolution(
                 new BoothOptimizationProblem(),
