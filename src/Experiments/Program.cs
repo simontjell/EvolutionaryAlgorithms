@@ -13,8 +13,51 @@ namespace Experiments
 {
     partial class Program
     {
+        public class Observation
+        {
+            public DateTimeOffset Time { get; set; }
+            public double Value { get; set; }
+        }
+
+        public class Period
+        {
+            public IList<Day> Days { get; }
+
+            public Period(IEnumerable<Observation> observations)
+            {
+                Days = observations.GroupBy(o => o.Time.Date).Select((day, index) => new Day(day.ToList(), index, this)).ToList();
+            }
+        }
+
+        public class Day
+        {
+            private readonly Period _parentPeriod;
+            public int _parentIndex { get; }
+
+            public Day Previous => _parentIndex == 0? null : _parentPeriod.Days[_parentIndex - 1];
+
+            public Day(List<Observation> observations, int index, Period parentPeriod)
+            {
+                Observations = observations;
+                _parentPeriod = parentPeriod;
+                _parentIndex = index;
+            }
+
+            public IList<Observation> Observations { get; }
+
+            public override string ToString()
+                => Observations.First().Time.Date.ToShortDateString();
+        }
+
         static void Main(string[] args)
         {
+            var period =
+                new Period(
+                    Enumerable.Range(1, 1000).Select(i => new Observation { Time = new DateTime(1977, 1, 1).AddHours(i), Value = i / 1.234 })
+                );
+                
+
+
             var optimizationAlgorithm = new DifferentialEvolution(
                 new BoothOptimizationProblem(),
                 //new SchafferFunctionOptimizationProblem(),
