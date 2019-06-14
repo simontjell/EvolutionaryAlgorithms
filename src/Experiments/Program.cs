@@ -42,12 +42,17 @@ namespace Experiments
             private readonly IList<NormalizedObservation> _normalizedObservations;
 
             public Day Previous => _parentIndex == 0? null : _parentPeriod.Days[_parentIndex - 1];
-            public NormalizedObservation GetNormalizedObservation(double index)
+
+            public NormalizedObservation this[double index]
                 =>
+                    ValidateIndex(index) ??
                     Interpolate(
                         _normalizedObservations.Zip(_normalizedObservations.Skip(1), (before, after) => (before, after)).Single(beforeAfter => beforeAfter.before.Time <= index && beforeAfter.after.Time >= index),
                         index
                     );
+
+            private NormalizedObservation ValidateIndex(double index)
+                => index >= 0.0 && index <= 1.0 ? (NormalizedObservation)null : throw new ArgumentOutOfRangeException(nameof(index));
 
             private NormalizedObservation Interpolate((NormalizedObservation before, NormalizedObservation after) beforeAfter, double index)
             {
