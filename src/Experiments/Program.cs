@@ -24,6 +24,10 @@ namespace Experiments
                         new Observation(new DateTime(1977,1,1).AddHours(1), 100.0),
                         new Observation(new DateTime(1977,1,1).AddHours(2), 120.0),
                         new Observation(new DateTime(1977,1,1).AddHours(3), 200.0),
+                        new Observation(new DateTime(1977,1,2).AddHours(1), 2100.0),
+                        new Observation(new DateTime(1977,1,2).AddHours(2), 2120.0),
+                        new Observation(new DateTime(1977,1,2).AddHours(3), 2200.0),
+                        new Observation(new DateTime(1977,1,2).AddHours(4), 22.0),
                     }
                 );
 
