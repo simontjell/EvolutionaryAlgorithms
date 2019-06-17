@@ -28,7 +28,11 @@ namespace Experiments
             => index >= 0.0 && index <= 1.0 ? (NormalizedObservation)null : throw new ArgumentOutOfRangeException(nameof(index));
 
         private NormalizedObservation Interpolate((NormalizedObservation before, NormalizedObservation after) beforeAfter, double index)
-            => new NormalizedObservation { Time = index, Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value };
+            => new NormalizedObservation {
+                Time = index,
+                Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value,
+                // TODO: Fix: AbsoluteTime = new DateTime( (long)(1.0 + (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time)) * beforeAfter.before.Original.Time.Ticks)
+            };
 
     }
 }

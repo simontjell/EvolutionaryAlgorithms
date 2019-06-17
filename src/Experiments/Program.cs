@@ -18,8 +18,8 @@ namespace Experiments
 
         static void Main(string[] args)
         {
-            var period =
-                new Period(
+            var years =
+                new Years(
                     new List<Observation> {
                         new Observation(new DateTime(1977,1,1).AddHours(1), 100.0),
                         new Observation(new DateTime(1977,1,1).AddHours(2), 120.0),
@@ -33,7 +33,7 @@ namespace Experiments
 
 
 
-            var value = period.Days[0].NormalizedObservations[0.75];
+            var value = years.Days.First().NormalizedObservations[0.75];
 
             var optimizationAlgorithm = new DifferentialEvolution(
                 new BoothOptimizationProblem(),
