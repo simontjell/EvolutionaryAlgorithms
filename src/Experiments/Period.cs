@@ -8,7 +8,7 @@ namespace Experiments
 {
     public class Period
     {
-        public Period(List<Observation> observations)
+        public Period(IList<Observation> observations)
         {
             Observations = observations;
         }
@@ -17,26 +17,19 @@ namespace Experiments
 
         private NormalizedCollection _normalizedCollection = null;
         public NormalizedCollection NormalizedObservations => _normalizedCollection ?? (_normalizedCollection = Normalizer.Instance.Normalize(Observations));
-
-        protected Period(){}
-
-        public Period WithObservations(List<Observation> observations)
-        {
-            Observations = observations;
-            return this;
-        }
     }
 
-    public abstract class Period<TSubPeriod> : Period, IEnumerable<TSubPeriod> where TSubPeriod : Period, new()
+    public abstract class Period<TSubPeriod> : Period, IEnumerable<TSubPeriod> where TSubPeriod : Period
     {
-        public Period(List<Observation> observations) : base(observations)
+        public Period(IList<Observation> observations) : base(observations)
         {
         }
 
         public  IEnumerator<TSubPeriod> GetEnumerator()
-            => Observations.GroupBy(GetSubPeriodGroupingKey).Select((group, index) => new TSubPeriod().WithObservations(group.ToList())).Cast<TSubPeriod>().GetEnumerator();
+            => Observations.GroupBy(GetSubPeriodGroupingKey).Select(MakeSubPeriod).GetEnumerator();
 
         protected abstract long GetSubPeriodGroupingKey(Observation observation);
+        protected abstract TSubPeriod MakeSubPeriod(IGrouping<long, Observation> observations);
 
         IEnumerator IEnumerable.GetEnumerator()
             => GetEnumerator();
@@ -44,61 +37,50 @@ namespace Experiments
 
     public class Years : Period<Year>
     {
+        public Years(IList<Observation> observations) : base(observations)
+        {
+        }
+
         public IEnumerable<Day> Days => this.SelectMany(year => year.SelectMany(month => month.Select(day => day)));
-
-        public Years(List<Observation> observations) : base(observations)
-        {
-        }
-
-        public Years() : this(null)
-        {
-
-        }
 
         protected override long GetSubPeriodGroupingKey(Observation observation)
             => observation.Time.Year;
+
+        protected override Year MakeSubPeriod(IGrouping<long, Observation> observations)
+            => new Year(observations.ToList());
     }
 
 
     public class Year : Period<Month>
     {
-        public Year(List<Observation> observations) : base(observations)
+        public Year(IList<Observation> observations) : base(observations)
         {
-        }
-
-        public Year() : this(null)
-        {
-
         }
 
         protected override long GetSubPeriodGroupingKey(Observation observation)
             => observation.Time.Year * 10000 + observation.Time.Month * 100;
+
+        protected override Month MakeSubPeriod(IGrouping<long, Observation> observations)
+            => new Month(observations.ToList());
     }
 
     public class Month : Period<Day>
     {
-        public Month(List<Observation> observations) : base(observations)
+        public Month(IList<Observation> observations) : base(observations)
         {
-        }
-
-        public Month() : this(null)
-        {
-
         }
 
         protected override long GetSubPeriodGroupingKey(Observation observation)
             => observation.Time.Year * 10000 + observation.Time.Month * 100 +  observation.Time.Day;
+
+        protected override Day MakeSubPeriod(IGrouping<long, Observation> observations)
+            => new Day(observations.ToList());
     }
 
     public class Day : Period
     {
-        public Day(List<Observation> observations) : base(observations)
+        public Day(IList<Observation> observations) : base(observations)
         {
-        }
-
-        public Day() : this(null)
-        {
-
         }
     }
 }

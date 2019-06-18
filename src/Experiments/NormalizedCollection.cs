@@ -31,7 +31,12 @@ namespace Experiments
             => new NormalizedObservation {
                 Time = index,
                 Value = (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time) * (beforeAfter.after.Value - beforeAfter.before.Value) + beforeAfter.before.Value,
-                // TODO: Fix: AbsoluteTime = new DateTime( (long)(1.0 + (index - beforeAfter.before.Time) / (beforeAfter.after.Time - beforeAfter.before.Time)) * beforeAfter.before.Original.Time.Ticks)
+                AbsoluteTime = new DateTime( 
+                    beforeAfter.before.Original.Time.AddTicks(
+                            (long)(index * (beforeAfter.after.Original.Time - beforeAfter.before.Original.Time).Ticks)
+                        )
+                        .Ticks
+                    )
             };
 
     }
