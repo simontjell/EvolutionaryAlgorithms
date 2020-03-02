@@ -9,9 +9,9 @@ namespace SimpleSystemer.EA.DE
     {
         private readonly Random _random;
 
-        public DifferentialEvolution(IOptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters) : base(optimizationProblem, optimizationParameters)
+        public DifferentialEvolution(IOptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters, int seed, params Individual[] injectedIndividuals) : base(optimizationProblem, optimizationParameters, injectedIndividuals)
         {
-            _random = new Random((int)DateTime.Now.Ticks);
+            _random = new Random(seed);
         }
 
         protected override IImmutableList<ParetoEvaluatedIndividual> SelectParents()

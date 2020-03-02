@@ -41,7 +41,8 @@ namespace Experiments
                 new DifferentialEvolutionOptimizationParameters(
                     100,
                     new GenerationCountTerminationCriterion(5000)
-                )
+                ),
+                0
             );
 
             //optimizationAlgorithm.OnGenerationFinished += (sender, eventArgs) => OptimizationAlgorithm_OnGenerationFinished(sender, eventArgs, true);

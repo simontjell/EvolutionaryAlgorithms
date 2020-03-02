@@ -42,14 +42,21 @@ namespace SimpleSystemer.EA
 
                 foreach (var evaluatedOffspringIndividual in evaluatedOffspringIndividuals)
                 {
-                    var survivingParents = GetSurvivingParents(evaluatedOffspringIndividual);
-
-                    if (ShouldOffspringSurvive(evaluatedOffspringIndividual, survivingParents))
+                    if(_optimizationProblem.IsFeasible(evaluatedOffspringIndividual))
                     {
-                        newPopulation.Add(evaluatedOffspringIndividual.AddFitnessValues(evaluatedOffspringIndividual.FitnessValues));
-                    }
+                        var survivingParents = GetSurvivingParents(evaluatedOffspringIndividual);
 
-                    newPopulation.AddRange(survivingParents);
+                        if (ShouldOffspringSurvive(evaluatedOffspringIndividual, survivingParents))
+                        {
+                            newPopulation.Add(evaluatedOffspringIndividual.AddFitnessValues(evaluatedOffspringIndividual.FitnessValues));
+                        }
+
+                        newPopulation.AddRange(survivingParents);
+                    }
+                    else
+                    {
+                        newPopulation.AddRange(evaluatedOffspringIndividual.Parents);
+                    }
                 }
 
                 var paretoEvaluated = 
@@ -118,16 +125,21 @@ namespace SimpleSystemer.EA
     public abstract class EvolutionaryAlgorithm<TOptimizationParameters> : EvolutionaryAlgorithm where TOptimizationParameters : OptimizationParameters
     {
         protected readonly TOptimizationParameters _optimizationParameters;
+        private readonly List<Individual> _injectedIndividuals;
 
-        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters) : base(optimizationProblem)
+        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters, params Individual[] injectedIndividuals) : base(optimizationProblem)
         {
             _optimizationParameters = optimizationParameters;
+            _injectedIndividuals = injectedIndividuals.ToList();
         }
 
         protected override Generation InitializeFirstGeneration()
         {
-            var evaluated = Enumerable.Range(0, _optimizationParameters.PopulationSize)
-                .Select(i => _optimizationProblem.CreateRandomIndividual())
+            var evaluated = 
+                _injectedIndividuals.Union(
+                    Enumerable.Range(0, _optimizationParameters.PopulationSize - _injectedIndividuals.Count)
+                    .Select(i => _optimizationProblem.CreateRandomIndividual())
+                )
                 .Select(i => i.AddFitnessValues(_optimizationProblem.CalculateFitnessValues(i)))
                 .ToImmutableList();
 
