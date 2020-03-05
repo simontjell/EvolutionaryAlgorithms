@@ -8,10 +8,12 @@ namespace SimpleSystemer.EA
     public abstract class EvolutionaryAlgorithm : IEvolutionaryAlgorithm
     {
         protected readonly IOptimizationProblem _optimizationProblem;
+        private readonly int _populationSize;
 
-        public EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem)
+        public EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, int populationSize)
         {
             _optimizationProblem = optimizationProblem;
+            _populationSize = populationSize;
         }
 
         public IImmutableList<Generation> Generations { get; protected set; }
@@ -81,7 +83,11 @@ namespace SimpleSystemer.EA
             => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
 
         private IImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(IImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
-            => paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).ToImmutableList();
+            => 
+                GetProblemDimensionality() == 1 ?
+                paretoEvaluated.OrderBy(individual => individual.FitnessValues.First()).ToImmutableList()
+                :
+                paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).Take(_populationSize).ToImmutableList();
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
         protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
@@ -127,7 +133,7 @@ namespace SimpleSystemer.EA
         protected readonly TOptimizationParameters _optimizationParameters;
         private readonly List<Individual> _injectedIndividuals;
 
-        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters, params Individual[] injectedIndividuals) : base(optimizationProblem)
+        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters, params Individual[] injectedIndividuals) : base(optimizationProblem, optimizationParameters.PopulationSize)
         {
             _optimizationParameters = optimizationParameters;
             _injectedIndividuals = injectedIndividuals.ToList();
