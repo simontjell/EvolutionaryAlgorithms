@@ -42,7 +42,7 @@ namespace Experiments
                     100,
                     new GenerationCountTerminationCriterion(5000)
                 ),
-                0
+                new Random(0)
             );
 
             //optimizationAlgorithm.OnGenerationFinished += (sender, eventArgs) => OptimizationAlgorithm_OnGenerationFinished(sender, eventArgs, true);
