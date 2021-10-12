@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public static class EvalutatedIndividualExtensions
     {

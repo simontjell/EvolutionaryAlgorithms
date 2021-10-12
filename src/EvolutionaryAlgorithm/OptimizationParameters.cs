@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using SimpleSystemer.EA.TerminationCriteria;
+using EvolutionaryAlgorithm.TerminationCriteria;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public class OptimizationParameters
     {

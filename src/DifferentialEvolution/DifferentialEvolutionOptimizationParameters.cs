@@ -1,7 +1,8 @@
 ﻿using System;
-using SimpleSystemer.EA.TerminationCriteria;
+using EvolutionaryAlgorithm.TerminationCriteria;
+using EvolutionaryAlgorithm;
 
-namespace SimpleSystemer.EA.DE
+namespace DifferentialEvolution
 {
     public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
     {

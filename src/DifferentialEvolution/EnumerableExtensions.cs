@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 
-namespace SimpleSystemer.EA.DE
+namespace DifferentialEvolution
 {
     public static class EnumerableExtensions
     {

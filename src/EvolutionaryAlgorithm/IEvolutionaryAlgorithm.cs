@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Immutable;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public interface IEvolutionaryAlgorithm
     {

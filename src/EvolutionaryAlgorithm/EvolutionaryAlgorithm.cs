@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Immutable;
 using System;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public abstract class EvolutionaryAlgorithm : IEvolutionaryAlgorithm
     {

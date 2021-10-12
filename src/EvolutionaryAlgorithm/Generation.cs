@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public class Generation
     {

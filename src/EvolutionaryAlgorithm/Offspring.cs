@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Immutable;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public class Offspring : Individual
     {

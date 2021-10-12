@@ -1,7 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public class Individual
     {

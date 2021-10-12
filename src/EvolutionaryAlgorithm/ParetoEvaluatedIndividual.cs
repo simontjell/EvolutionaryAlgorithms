@@ -1,4 +1,4 @@
-﻿namespace SimpleSystemer.EA
+﻿namespace EvolutionaryAlgorithm
 {
     public class ParetoEvaluatedIndividual : EvaluatedIndividual
     {

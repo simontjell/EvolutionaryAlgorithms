@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using SimpleSystemer.EA;
+using EvolutionaryAlgorithm;
 
-namespace Experiments.OptimizationProblems
+namespace DifferentialEvolution.Tests.OptimizationProblems
 {
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
     public class RosenbrockOptimizationProblem : OptimizationProblem
@@ -16,7 +16,7 @@ namespace Experiments.OptimizationProblems
         {
             if(n < 2)
             {
-                throw new ArgumentOutOfRangeException("n must be at least 2");
+                throw new ArgumentOutOfRangeException($"{nameof(n)} must be at least 2");
             }
         }
 
@@ -30,6 +30,7 @@ namespace Experiments.OptimizationProblems
                 )
                 .Sum()
             }.ToImmutableList();
+
         public override Individual CreateRandomIndividual() 
             => new Individual(Enumerable.Range(0, _n).Select(i => _rnd.NextDouble()).ToArray());
     }

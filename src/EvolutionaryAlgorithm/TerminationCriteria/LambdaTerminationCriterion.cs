@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SimpleSystemer.EA.TerminationCriteria
+namespace EvolutionaryAlgorithm.TerminationCriteria
 {
     public class LambdaTerminationCriterion : ITerminationCriterion
     {

@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Collections.Immutable;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public class EvaluatedOffspring : Offspring, IEvaluatedIndividual
     {

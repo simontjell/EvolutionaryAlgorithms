@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialEvolution", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvolutionaryAlgorithm", "src\EvolutionaryAlgorithm\EvolutionaryAlgorithm.csproj", "{F84D890C-3A0C-4B6D-8677-41287041B0AD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8D6585BB-5C87-44F0-8152-0BB3681D8F8D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptimizationProblemTests", "tests\DifferentialEvolution.Tests\OptimizationProblemTests.csproj", "{461B8B85-F61F-4118-A73F-C50A12298467}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,11 +27,18 @@ Global
 		{F84D890C-3A0C-4B6D-8677-41287041B0AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F84D890C-3A0C-4B6D-8677-41287041B0AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F84D890C-3A0C-4B6D-8677-41287041B0AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{461B8B85-F61F-4118-A73F-C50A12298467}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{461B8B85-F61F-4118-A73F-C50A12298467}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{461B8B85-F61F-4118-A73F-C50A12298467}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{461B8B85-F61F-4118-A73F-C50A12298467}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1649AE7B-74C0-44F9-9175-C7FE3F9D3DB2}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{461B8B85-F61F-4118-A73F-C50A12298467} = {8D6585BB-5C87-44F0-8152-0BB3681D8F8D}
 	EndGlobalSection
 EndGlobal

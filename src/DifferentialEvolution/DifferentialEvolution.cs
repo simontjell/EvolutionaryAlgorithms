@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Immutable;
+using EvolutionaryAlgorithm;
 
-namespace SimpleSystemer.EA.DE
+namespace DifferentialEvolution
 {
     // https://en.wikipedia.org/wiki/Differential_evolution
     public class DifferentialEvolution : EvolutionaryAlgorithm<DifferentialEvolutionOptimizationParameters>

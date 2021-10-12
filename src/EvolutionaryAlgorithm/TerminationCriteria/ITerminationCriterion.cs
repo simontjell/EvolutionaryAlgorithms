@@ -1,4 +1,4 @@
-﻿namespace SimpleSystemer.EA.TerminationCriteria
+﻿namespace EvolutionaryAlgorithm.TerminationCriteria
 {
     public interface ITerminationCriterion
     {

@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 
-namespace SimpleSystemer.EA
+namespace EvolutionaryAlgorithm
 {
     public abstract class OptimizationProblem : IOptimizationProblem
     {

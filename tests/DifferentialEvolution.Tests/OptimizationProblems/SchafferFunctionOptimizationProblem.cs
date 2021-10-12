@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using SimpleSystemer.EA;
+using EvolutionaryAlgorithm;
 
-namespace Experiments.OptimizationProblems
+namespace DifferentialEvolution.Tests.OptimizationProblems
 {
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_multi-objective_optimization
     public class SchafferFunctionOptimizationProblem : OptimizationProblem
