@@ -29,7 +29,7 @@ namespace DifferentialEvolution.Tests
 
             sut.OnGenerationFinished += (s, e) => {
                 var bestIndividual = GetBestIndividual();
-                Console.WriteLine($"{nameof(BoothOptimizationProblem)} {sut.Generations.Count}: ({bestIndividual.Genes[0]}, {bestIndividual.Genes[1]}) --> {bestIndividual.FitnessValues[0]}");
+                Console.WriteLine($"{nameof(BoothOptimizationProblem)} {bestIndividual}");
             };
 
             sut.Optimize();
@@ -61,7 +61,7 @@ namespace DifferentialEvolution.Tests
 
             sut.OnGenerationFinished += (s, e) => {
                 var bestIndividual = GetBestIndividual();
-                Console.WriteLine($"{nameof(SphereOptimizationProblem)} {sut.Generations.Count}: ({bestIndividual.Genes[0]}, {bestIndividual.Genes[1]}) --> {bestIndividual.FitnessValues[0]}");
+                Console.WriteLine($"{nameof(SphereOptimizationProblem)} {sut.Generations.Count}: {bestIndividual}");
             };
 
             sut.Optimize();
