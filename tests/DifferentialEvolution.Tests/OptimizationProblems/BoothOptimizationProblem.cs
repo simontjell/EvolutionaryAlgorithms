@@ -9,7 +9,7 @@ namespace DifferentialEvolution.Tests.OptimizationProblems
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
     public class BoothOptimizationProblem : OptimizationProblem
     {
-        public BoothOptimizationProblem() : base(2) { }
+        public BoothOptimizationProblem(Random rnd) : base(2, rnd) { }
 
         public override ImmutableList<double> CalculateFitnessValues(Individual individual) 
             => new List<double> { CalculateFitnessValue(individual.Genes[0], individual.Genes[1]) }.ToImmutableList();

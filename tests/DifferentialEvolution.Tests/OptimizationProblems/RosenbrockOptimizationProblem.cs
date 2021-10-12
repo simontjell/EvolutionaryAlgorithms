@@ -9,10 +9,7 @@ namespace DifferentialEvolution.Tests.OptimizationProblems
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
     public class RosenbrockOptimizationProblem : OptimizationProblem
     {
-        private readonly Random _rnd;
-        private readonly int _n;
-
-        public RosenbrockOptimizationProblem(int n) : base(n)
+        public RosenbrockOptimizationProblem(int n, Random rnd) : base(n, rnd)
         {
             if(n < 2)
             {

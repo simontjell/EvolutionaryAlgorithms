@@ -13,28 +13,32 @@ namespace DifferentialEvolution.Tests
         public void When_optimization_problem_is_Booth_DE_converges_correctly()
         {
             // Arrange
+            var rnd = new Random(0);
             var sut = new DifferentialEvolution(
-                new BoothOptimizationProblem(),
+                new BoothOptimizationProblem(rnd),
                 new DifferentialEvolutionOptimizationParameters(
                     100,
                     new GenerationCountTerminationCriterion(100)
                 ),
-                new Random(0)
+                rnd
             );
 
             // Act
-            EvaluatedIndividual bestIndividual = null; 
+            EvaluatedIndividual GetBestIndividual()
+                => sut.GetBestIndividuals(sut.Generations.Last()).Single();
+
             sut.OnGenerationFinished += (s, e) => {
-                bestIndividual = sut.GetBestIndividuals(sut.Generations.Last()).Single();
+                var bestIndividual = GetBestIndividual();
                 Console.WriteLine($"{sut.Generations.Count}: ({bestIndividual.Genes[0]}, {bestIndividual.Genes[1]}) --> {bestIndividual.FitnessValues[0]}");
             };
 
             sut.Optimize();
 
             // Assert
-            Assert.Equal(1.0, bestIndividual.Genes[0], 2);
-            Assert.Equal(3.0, bestIndividual.Genes[1], 2);
-            Assert.Equal(0.0, bestIndividual.FitnessValues.Single(), 2);
+            var finalBestIndividual = GetBestIndividual();
+            Assert.Equal(1.0, finalBestIndividual.Genes[0], 2);
+            Assert.Equal(3.0, finalBestIndividual.Genes[1], 2);
+            Assert.Equal(0.0, finalBestIndividual.FitnessValues.Single(), 2);
         }
     }
 }
