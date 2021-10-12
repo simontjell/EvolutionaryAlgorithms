@@ -6,7 +6,7 @@ namespace EvolutionaryAlgorithm
 {
     public class Offspring : Individual
     {
-        public ImmutableList<EvaluatedIndividual> Parents { get; private set; }
+        public ImmutableList<EvaluatedIndividual> Parents { get; }
 
         public Offspring(EvaluatedIndividual parent, params double[] genes) : this(new List<EvaluatedIndividual> { parent }.ToImmutableList(), genes) { }
 

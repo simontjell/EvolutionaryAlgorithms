@@ -11,7 +11,7 @@ namespace EvolutionaryAlgorithm
             TerminationCriteria = terminationCriteria;
         }
 
-        public int PopulationSize { get; private set; }
-        public IEnumerable<ITerminationCriterion> TerminationCriteria { get; private set; }
+        public int PopulationSize { get; }
+        public IEnumerable<ITerminationCriterion> TerminationCriteria { get; }
     }
 }

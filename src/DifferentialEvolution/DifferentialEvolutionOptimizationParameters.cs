@@ -6,8 +6,8 @@ namespace DifferentialEvolution
 {
     public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
     {
-        public double CR { get; private set; } = 0.5;
-        public double F { get; private set; } = 1.0;
+        public double CR { get; } = 0.5;
+        public double F { get; } = 1.0;
 
         public DifferentialEvolutionOptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
         {
