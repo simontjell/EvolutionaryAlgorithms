@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2020
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialEvolution", "src\CSharpDE\DifferentialEvolution.csproj", "{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Experiments", "src\Experiments\Experiments.csproj", "{AB23FC9B-22A7-45DD-9888-958303EB9D84}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DifferentialEvolution", "src\DifferentialEvolution\DifferentialEvolution.csproj", "{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EvolutionaryAlgorithm", "src\EvolutionaryAlgorithm\EvolutionaryAlgorithm.csproj", "{F84D890C-3A0C-4B6D-8677-41287041B0AD}"
 EndProject
@@ -19,10 +17,6 @@ Global
 		{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77FFFA66-675A-4EEB-BCD0-CD098CEAAD7B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AB23FC9B-22A7-45DD-9888-958303EB9D84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AB23FC9B-22A7-45DD-9888-958303EB9D84}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AB23FC9B-22A7-45DD-9888-958303EB9D84}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AB23FC9B-22A7-45DD-9888-958303EB9D84}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F84D890C-3A0C-4B6D-8677-41287041B0AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
