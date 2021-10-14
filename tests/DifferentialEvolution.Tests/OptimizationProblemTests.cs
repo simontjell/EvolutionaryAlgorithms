@@ -5,6 +5,7 @@ using EvolutionaryAlgorithm;
 using EvolutionaryAlgorithm.TerminationCriteria;
 using System.Linq;
 using System.Collections.Immutable;
+using Spectre.Console;
 
 namespace DifferentialEvolution.Tests
 {
@@ -88,18 +89,34 @@ namespace DifferentialEvolution.Tests
                 ),
                 rnd
             );
+            var canvasWidth = 50;
+            var canvasHeight = 50;
+            var scaling = 25.0;
+            var canvas = new Canvas(canvasWidth, canvasHeight);    
 
             // Act
             IImmutableList<ParetoEvaluatedIndividual> GetBestIndividuals()
                 => sut.GetBestIndividuals(sut.Generations.Last());
 
-            sut.OnGenerationFinished += (s, e) => {
-                var bestIndividuals = GetBestIndividuals();
-                var paretoFronts = sut.Generations.Last().Population.GroupBy(p => p.ParetoRank).Select(g => new { ParetoRank = g.Key, NumberOfIndividuals = g.Count() } ).OrderBy(p => p.ParetoRank).ToList();
-                Console.WriteLine($"{nameof(SchafferFunctionOptimizationProblem)} {sut.Generations.Count}: {string.Join(", ", paretoFronts.Select(p => $"{p.ParetoRank}: {p.NumberOfIndividuals}"))}");
-            };
 
-            sut.Optimize();
+            AnsiConsole.Live(canvas)
+                .Start(
+                    ctx => {
+                        sut.OnGenerationFinished += (s, e) => {
+                            var bestIndividuals = GetBestIndividuals();
+                            bestIndividuals.Select(i => new { F1 = i.FitnessValues[0]*scaling, F2 = i.FitnessValues[1]*scaling}).Where(p => p.F1 < canvasWidth && p.F2 < canvasHeight)
+                                .ToList()
+                                .ForEach(p => {
+                                    canvas.SetPixel((int)p.F1, canvasHeight - (int)p.F2, Color.White);
+                                });
+                            ctx.Refresh();
+                            var paretoFronts = sut.Generations.Last().Population.GroupBy(p => p.ParetoRank).Select(g => new { ParetoRank = g.Key, NumberOfIndividuals = g.Count() } ).OrderBy(p => p.ParetoRank).ToList();
+                            //Console.WriteLine($"{nameof(SchafferFunctionOptimizationProblem)} {sut.Generations.Count}: {string.Join(", ", paretoFronts.Select(p => $"{p.ParetoRank}: {p.NumberOfIndividuals}"))}");
+                        };
+
+                        sut.Optimize();
+                    }
+                );
 
             // Assert
             var finalBestIndividuals = GetBestIndividuals();
