@@ -100,10 +100,10 @@ namespace DifferentialEvolution.Tests
             };
 
             sut.Optimize();
-            System.IO.File.WriteAllLines("schaffer_front_0.csv", finalBestIndividuals.Select(p => $"{p.FitnessValues[0]},{p.FitnessValues[1]}"));
 
             // Assert
             var finalBestIndividuals = GetBestIndividuals();
+            System.IO.File.WriteAllLines("schaffer_front_0.csv", finalBestIndividuals.Select(p => $"{p.FitnessValues[0]},{p.FitnessValues[1]}"));
             Assert.Equal(0, finalBestIndividuals.Select(i => i.ParetoRank).Distinct().Single());
             Assert.True(finalBestIndividuals.Count >= populationSize / 2);
             Assert.Equal(populationSize, sut.Generations.Last().Population.Count);
