@@ -19,5 +19,11 @@ namespace DifferentialEvolution
 
         public static IEnumerable<TResult> SelectInvoke<TResult>(this IEnumerable<Func<TResult>> source) 
             => source.Select(f => f());
+
+        public static (TElement, TElement, TElement) TakeTriplet<TElement>(this IEnumerable<TElement> source)
+        {
+            var elements = source.Take(3).ToArray();
+            return (elements[0], elements[1], elements[2]);
+        }
     }
 }

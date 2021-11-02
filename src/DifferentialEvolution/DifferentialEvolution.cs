@@ -26,10 +26,12 @@ namespace DifferentialEvolution
                 parents
                 .Select(x =>
                     {
-                        var abc = parents.OrderBy(individual => individual == x ? 0.0 : 1.0 + _random.NextDouble()).Skip(1).Take(3).ToImmutableList();
-                        var a = abc[0];
-                        var b = abc[1];
-                        var c = abc[2];
+                        var (a, b, c) = 
+                            parents
+                            .Where(individual => individual != x)
+                            .OrderBy(_ => _random.NextDouble())
+                            .TakeTriplet()
+                        ;
 
                         var R = _random.Next(0, n);
 
