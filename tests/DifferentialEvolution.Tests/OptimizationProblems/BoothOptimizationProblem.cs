@@ -7,14 +7,12 @@ using EvolutionaryAlgorithm;
 namespace DifferentialEvolution.Tests.OptimizationProblems
 {
     // https://en.wikipedia.org/wiki/Test_functions_for_optimization#Test_functions_for_single-objective_optimization
-    public class BoothOptimizationProblem : OptimizationProblem
+    public class BoothOptimizationProblem(Random rnd) : OptimizationProblem(2, rnd)
     {
-        public BoothOptimizationProblem(Random rnd) : base(2, rnd) { }
-
         public override ImmutableList<double> CalculateFitnessValues(Individual individual) 
-            => new List<double> { CalculateFitnessValue(individual.Genes[0], individual.Genes[1]) }.ToImmutableList();
+            => [CalculateFitnessValue(individual.Genes[0], individual.Genes[1])];
 
-        private double CalculateFitnessValue(double x, double y)
+        private static double CalculateFitnessValue(double x, double y)
             => Math.Pow(x+2.0*y-7.0, 2.0) + Math.Pow(2.0*x+y-5.0, 2.0);
 
         public override bool IsFeasible(Individual individual)

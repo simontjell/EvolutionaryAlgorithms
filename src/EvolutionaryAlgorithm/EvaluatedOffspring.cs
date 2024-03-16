@@ -3,13 +3,8 @@ using System.Collections.Immutable;
 
 namespace EvolutionaryAlgorithm
 {
-    public class EvaluatedOffspring : Offspring, IEvaluatedIndividual
+    public class EvaluatedOffspring(Offspring offspring, ImmutableList<double> fitnessValues) : Offspring(offspring.Parents, offspring.Genes.ToArray()), IEvaluatedIndividual
     {
-        public ImmutableList<double> FitnessValues { get; }
-
-        public EvaluatedOffspring(Offspring offspring, ImmutableList<double> fitnessValues) : base(offspring.Parents, offspring.Genes.ToArray())
-        {
-            FitnessValues = fitnessValues;
-        }
+        public ImmutableList<double> FitnessValues { get; } = fitnessValues;
     }
 }

@@ -2,13 +2,8 @@
 
 namespace EvolutionaryAlgorithm
 {
-    public class Generation
+    public class Generation(IImmutableList<ParetoEvaluatedIndividual> population)
     {
-        public Generation(IImmutableList<ParetoEvaluatedIndividual> population)
-        {
-            Population = population;
-        }
-
-        public IImmutableList<ParetoEvaluatedIndividual> Population { get; }
+        public IImmutableList<ParetoEvaluatedIndividual> Population { get; } = population;
     }
 }

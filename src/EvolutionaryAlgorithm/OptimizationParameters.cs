@@ -3,15 +3,9 @@ using EvolutionaryAlgorithm.TerminationCriteria;
 
 namespace EvolutionaryAlgorithm
 {
-    public class OptimizationParameters
+    public class OptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria)
     {
-        public OptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria)
-        {
-            PopulationSize = populationSize;
-            TerminationCriteria = terminationCriteria;
-        }
-
-        public int PopulationSize { get; }
-        public IEnumerable<ITerminationCriterion> TerminationCriteria { get; }
+        public int PopulationSize { get; } = populationSize;
+        public IEnumerable<ITerminationCriterion> TerminationCriteria { get; } = terminationCriteria;
     }
 }

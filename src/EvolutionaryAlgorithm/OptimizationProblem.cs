@@ -4,21 +4,15 @@ using System.Linq;
 
 namespace EvolutionaryAlgorithm
 {
-    public abstract class OptimizationProblem : IOptimizationProblem
+    public abstract class OptimizationProblem(int n, Random rnd) : IOptimizationProblem
     {
-        protected readonly int _n;
-        protected readonly Random _rnd;
-
-        public OptimizationProblem(int n, Random rnd)
-        {
-            _n = n;
-            _rnd = rnd;
-        }
+        protected readonly int _n = n;
+        protected readonly Random _rnd = rnd;
 
         public abstract ImmutableList<double> CalculateFitnessValues(Individual individual);
         
         public virtual Individual CreateRandomIndividual()
-            => new Individual(Enumerable.Range(0, _n).Select(i => _rnd.NextDouble()).ToArray());
+            => new(Enumerable.Range(0, _n).Select(i => _rnd.NextDouble()).ToArray());
 
         public virtual bool IsFeasible(Individual individual) => true;
     }

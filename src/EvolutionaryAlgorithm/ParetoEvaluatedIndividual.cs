@@ -1,13 +1,8 @@
 ﻿namespace EvolutionaryAlgorithm
 {
-    public class ParetoEvaluatedIndividual : EvaluatedIndividual
+    public class ParetoEvaluatedIndividual(EvaluatedIndividual individual, int paretoRank) : EvaluatedIndividual(individual, individual.FitnessValues)
     {
-        public ParetoEvaluatedIndividual(EvaluatedIndividual individual, int paretoRank) : base(individual, individual.FitnessValues)
-        {
-            ParetoRank = paretoRank;
-        }
-
-        public int ParetoRank { get; }
+        public int ParetoRank { get; } = paretoRank;
 
         public override string ToString()
             => $"{base.ToString()} ({ParetoRank})";

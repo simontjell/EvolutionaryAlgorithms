@@ -3,17 +3,12 @@ using System.Linq;
 
 namespace EvolutionaryAlgorithm
 {
-    public class Individual
+    public class Individual(params double[] genes)
     {
-        public ImmutableList<double> Genes { get; }
+        public ImmutableList<double> Genes { get; } = [.. genes];
         public double this[int index] => Genes[index];
 
-        public Individual(params double[] genes)
-        {
-            Genes = genes.ToImmutableList();
-        }
-
-        public EvaluatedIndividual AddFitnessValues(ImmutableList<double> fitnessValues) => new EvaluatedIndividual(this, fitnessValues);
+        public EvaluatedIndividual AddFitnessValues(ImmutableList<double> fitnessValues) => new(this, fitnessValues);
 
         public override string ToString()
             => $"[{(string.Join(";", Genes.Select(g => g.ToString())))}]";

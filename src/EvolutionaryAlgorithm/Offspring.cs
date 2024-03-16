@@ -4,18 +4,12 @@ using System.Collections.Immutable;
 
 namespace EvolutionaryAlgorithm
 {
-    public class Offspring : Individual
+    public class Offspring(ImmutableList<EvaluatedIndividual> parents, params double[] genes) : Individual(genes)
     {
-        public ImmutableList<EvaluatedIndividual> Parents { get; }
+        public ImmutableList<EvaluatedIndividual> Parents { get; } = parents;
 
-        public Offspring(EvaluatedIndividual parent, params double[] genes) : this(new List<EvaluatedIndividual> { parent }.ToImmutableList(), genes) { }
+        public Offspring(EvaluatedIndividual parent, params double[] genes) : this([parent], genes) { }
 
-        public Offspring(EvaluatedIndividual parent, Individual individual) : this(parent, individual.Genes.ToArray()) { }
-
-        public Offspring(ImmutableList<EvaluatedIndividual> parents, params double[] genes) : base(genes)
-        {
-            Parents = parents;
-        }
-
+        public Offspring(EvaluatedIndividual parent, Individual individual) : this(parent, [.. individual.Genes]) { }
     }
 }

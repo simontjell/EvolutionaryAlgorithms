@@ -6,21 +6,16 @@ using EvolutionaryAlgorithm;
 namespace DifferentialEvolution
 {
     // https://en.wikipedia.org/wiki/Differential_evolution
-    public class DifferentialEvolution : EvolutionaryAlgorithm<DifferentialEvolutionOptimizationParameters>
+    public class DifferentialEvolution(IOptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters, Random random, params Individual[] injectedIndividuals) : EvolutionaryAlgorithm<DifferentialEvolutionOptimizationParameters>(optimizationProblem, optimizationParameters, injectedIndividuals)
     {
-        private readonly Random _random;
-
-        public DifferentialEvolution(IOptimizationProblem optimizationProblem, DifferentialEvolutionOptimizationParameters optimizationParameters, Random random, params Individual[] injectedIndividuals) : base(optimizationProblem, optimizationParameters, injectedIndividuals)
-        {
-            _random = random;
-        }
+        private readonly Random _random = random;
 
         protected override IImmutableList<ParetoEvaluatedIndividual> SelectParents()
             => Generations.Last().Population;   // Take all...
 
         protected override IImmutableList<Offspring> CreateOffspring(IImmutableList<ParetoEvaluatedIndividual> parents)
         {
-            var n = parents.First().Genes.Count;
+            var n = parents[0].Genes.Count;
 
             return 
                 parents

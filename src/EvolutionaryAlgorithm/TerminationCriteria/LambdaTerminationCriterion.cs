@@ -2,15 +2,8 @@
 
 namespace EvolutionaryAlgorithm.TerminationCriteria
 {
-    public class LambdaTerminationCriterion : ITerminationCriterion
+    public class LambdaTerminationCriterion(Func<IEvolutionaryAlgorithm, bool> shouldTerminate) : ITerminationCriterion
     {
-        private readonly Func<IEvolutionaryAlgorithm, bool> _shouldTerminate;
-
-        public LambdaTerminationCriterion(Func<IEvolutionaryAlgorithm, bool> shouldTerminate)
-        {
-            _shouldTerminate = shouldTerminate;
-        }
-
-        public bool ShouldTerminate(IEvolutionaryAlgorithm optimizationAlgorithm) => _shouldTerminate(optimizationAlgorithm);
+        public bool ShouldTerminate(IEvolutionaryAlgorithm optimizationAlgorithm) => shouldTerminate(optimizationAlgorithm);
     }
 }

@@ -5,16 +5,10 @@ using System;
 
 namespace EvolutionaryAlgorithm
 {
-    public abstract class EvolutionaryAlgorithm : IEvolutionaryAlgorithm
+    public abstract class EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, int populationSize) : IEvolutionaryAlgorithm
     {
-        protected readonly IOptimizationProblem _optimizationProblem;
-        private readonly int _populationSize;
-
-        public EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, int populationSize)
-        {
-            _optimizationProblem = optimizationProblem;
-            _populationSize = populationSize;
-        }
+        protected readonly IOptimizationProblem _optimizationProblem = optimizationProblem;
+        private readonly int _populationSize = populationSize;
 
         public IImmutableList<Generation> Generations { get; protected set; }
 
@@ -90,10 +84,10 @@ namespace EvolutionaryAlgorithm
                 paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).Take(_populationSize).ToImmutableList();
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
-        protected double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
+        protected static double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
             => population.Where(other => other.ParetoRank == individual.ParetoRank).Select(individual.Distance).Min();   
 
-        protected int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
+        protected static int CalculateParetoRank(EvaluatedIndividual evaluatedIndividual, IList<EvaluatedIndividual> newPopulation)
             => newPopulation.Count(evaluatedIndividual.IsParetoDominatedBy);
 
         protected virtual IImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
@@ -107,7 +101,7 @@ namespace EvolutionaryAlgorithm
         protected abstract IImmutableList<ParetoEvaluatedIndividual> SelectParents();
 
         protected virtual int GetProblemDimensionality()
-            => Generations.First().Population.First().FitnessValues.Count;  // TODO: Find a better way to detect problem dimensionality...
+            => Generations[0].Population[0].FitnessValues.Count;  // TODO: Find a better way to detect problem dimensionality...
 
         public virtual IImmutableList<ParetoEvaluatedIndividual> GetBestIndividuals(Generation generation)
         {
@@ -128,16 +122,10 @@ namespace EvolutionaryAlgorithm
         }
     }
 
-    public abstract class EvolutionaryAlgorithm<TOptimizationParameters> : EvolutionaryAlgorithm where TOptimizationParameters : OptimizationParameters
+    public abstract class EvolutionaryAlgorithm<TOptimizationParameters>(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters, params Individual[] injectedIndividuals) : EvolutionaryAlgorithm(optimizationProblem, optimizationParameters.PopulationSize) where TOptimizationParameters : OptimizationParameters
     {
-        protected readonly TOptimizationParameters _optimizationParameters;
-        private readonly List<Individual> _injectedIndividuals;
-
-        protected EvolutionaryAlgorithm(IOptimizationProblem optimizationProblem, TOptimizationParameters optimizationParameters, params Individual[] injectedIndividuals) : base(optimizationProblem, optimizationParameters.PopulationSize)
-        {
-            _optimizationParameters = optimizationParameters;
-            _injectedIndividuals = injectedIndividuals.ToList();
-        }
+        protected readonly TOptimizationParameters _optimizationParameters = optimizationParameters;
+        private readonly List<Individual> _injectedIndividuals = injectedIndividuals.ToList();
 
         protected override Generation InitializeFirstGeneration()
         {

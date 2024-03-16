@@ -6,15 +6,18 @@ namespace DifferentialEvolution
 {
     public class DifferentialEvolutionOptimizationParameters : OptimizationParameters
     {
-        public double CR { get; } = 0.5;
-        public double F { get; } = 1.0;
+        private const double DefaultCr = 0.5;
+        private const double DefaultF = 1.0;
+        public double CR { get; init; }
+        public double F { get; init; }
 
-        public DifferentialEvolutionOptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
+        public DifferentialEvolutionOptimizationParameters(int populationSize, double cr = DefaultCr, double f = DefaultF, params ITerminationCriterion[] terminationCriteria) : base(populationSize, terminationCriteria)
         {
-            if (populationSize < 4)
-            {
-                throw new ArgumentOutOfRangeException(nameof(populationSize), "The population must consist of at least 4 individuals");
-            }
+            ArgumentOutOfRangeException.ThrowIfLessThan(populationSize, 4);
+            CR = cr;
+            F = f;
         }
+
+        public DifferentialEvolutionOptimizationParameters(int populationSize, params ITerminationCriterion[] terminationCriteria) : this(populationSize, DefaultCr, DefaultF, terminationCriteria){}
     }
 }
