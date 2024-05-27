@@ -29,4 +29,4 @@ jobs:
     - name: NuGet (pack)
       run: dotnet pack --configuration Release
     - name: NuGet (push)
-      run: dotnet nuget push src/DifferentialEvolution/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json --skip-duplicate --no-symbols
+      run: dotnet nuget push src/DifferentialEvolution/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json
