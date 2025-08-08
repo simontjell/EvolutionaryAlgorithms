@@ -1,10 +1,11 @@
-name: .NET
+name: .NET Build
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
-        include-prerelease: true
+        dotnet-version: 10.0.x
+        dotnet-quality: 'preview'
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
@@ -32,8 +33,8 @@ jobs:
     - name: Git-based semantic version
       run: |
         echo ${{ steps.version.outputs.version }}
-    - name: NuGet (pack)
-      run: dotnet pack --configuration Release -p:PackageVersion=${{ steps.version.outputs.version }}
+    - name: NuGet (pack)  
+      run: dotnet pack --configuration Release -p:PackageVersion=${{ steps.version.outputs.version || '1.0.1' }}
     - name: NuGet (push, 1)
       run: dotnet nuget push src/EvolutionaryAlgorithm/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json
     - name: NuGet (push, 2)

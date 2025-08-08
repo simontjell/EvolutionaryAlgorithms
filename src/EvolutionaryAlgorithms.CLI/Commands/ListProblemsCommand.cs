@@ -5,6 +5,7 @@ using System.Reflection;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using EvolutionaryAlgorithm;
+using EvolutionaryAlgorithms.CLI.Helpers;
 
 namespace EvolutionaryAlgorithms.CLI.Commands;
 
@@ -19,39 +20,12 @@ public sealed class ListProblemsCommand : Command<ListProblemsCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        var assemblies = GetAssembliesToSearch(settings.Assemblies);
+        var assemblies = AssemblyHelper.GetAssembliesToSearch(settings.Assemblies);
         var problems = FindOptimizationProblems(assemblies);
 
         DisplayProblems(problems);
 
         return 0;
-    }
-
-    private static System.Collections.Generic.List<Assembly> GetAssembliesToSearch(string[]? additionalAssemblyPaths)
-    {
-        var assemblies = new System.Collections.Generic.List<Assembly>();
-        
-        // Add currently loaded assemblies
-        assemblies.AddRange(AppDomain.CurrentDomain.GetAssemblies());
-        
-        // Add additional assemblies if specified
-        if (additionalAssemblyPaths != null)
-        {
-            foreach (var path in additionalAssemblyPaths)
-            {
-                try
-                {
-                    var assembly = Assembly.LoadFrom(path);
-                    assemblies.Add(assembly);
-                }
-                catch (Exception ex)
-                {
-                    AnsiConsole.MarkupLine($"[red]Error loading assembly '{path}': {ex.Message}[/]");
-                }
-            }
-        }
-        
-        return assemblies;
     }
 
     private static System.Collections.Generic.List<System.Type> FindOptimizationProblems(System.Collections.Generic.List<Assembly> assemblies)
