@@ -5,6 +5,7 @@ using System.Reflection;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using EvolutionaryAlgorithm;
+using EvolutionaryAlgorithms.CLI.Cli;
 using EvolutionaryAlgorithms.CLI.Helpers;
 
 namespace EvolutionaryAlgorithms.CLI.Commands;
@@ -13,81 +14,53 @@ public sealed class ListProblemsCommand : Command<ListProblemsCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
-        [Description("Additional assemblies to search for optimization problems")]
+        [Description("Assemblies to search for optimization problems (required)")]
         [CommandOption("-a|--assemblies")]
-        public string[]? Assemblies { get; init; }
+        public required string[] Assemblies { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        var assemblies = AssemblyHelper.GetAssembliesToSearch(settings.Assemblies);
-        var problems = FindOptimizationProblems(assemblies);
+        // Validate assemblies parameter is provided
+        if (settings.Assemblies == null || settings.Assemblies.Length == 0)
+        {
+            AnsiConsole.MarkupLine("[red]Error: Assemblies parameter (-a|--assemblies) is required[/]");
+            AnsiConsole.MarkupLine("[dim]Use 'list-problems --help' to see usage information[/]");
+            return 1;
+        }
 
-        DisplayProblems(problems);
+        // Discover commands dynamically
+        CommandDiscovery.RegisterOptimizationCommands(null, settings.Assemblies);
+        
+        DisplayCommands();
 
         return 0;
     }
 
-    private static System.Collections.Generic.List<System.Type> FindOptimizationProblems(System.Collections.Generic.List<Assembly> assemblies)
+    private static void DisplayCommands()
     {
-        var problems = new System.Collections.Generic.List<System.Type>();
-        
-        foreach (var assembly in assemblies)
+        if (CommandDiscovery.DiscoveredCommands.Count == 0)
         {
-            try
-            {
-                var types = assembly.GetTypes()
-                    .Where(t => t.IsClass && 
-                               !t.IsAbstract && 
-                               typeof(IOptimizationProblem).IsAssignableFrom(t))
-                    .ToList();
-                
-                problems.AddRange(types);
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                // Handle cases where some types can't be loaded
-                var loadableTypes = ex.Types
-                    .Where(t => t != null)
-                    .Where(t => t.IsClass && 
-                               !t.IsAbstract && 
-                               typeof(IOptimizationProblem).IsAssignableFrom(t))
-                    .ToList();
-                
-                problems.AddRange(loadableTypes);
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[yellow]Warning: Could not load types from assembly '{assembly.FullName}': {ex.Message}[/]");
-            }
-        }
-        
-        return problems.Distinct().ToList();
-    }
-
-    private static void DisplayProblems(System.Collections.Generic.List<System.Type> problems)
-    {
-        if (problems.Count == 0)
-        {
-            AnsiConsole.MarkupLine("[yellow]No optimization problems found.[/]");
+            AnsiConsole.MarkupLine("[yellow]No optimization problem commands found.[/]");
             return;
         }
 
         var table = new Table();
-        table.AddColumn("Name");
-        table.AddColumn("Namespace");
-        table.AddColumn("Assembly");
+        table.AddColumn("Command Name");
+        table.AddColumn("Description");
+        table.AddColumn("Type");
 
-        foreach (var problem in problems.OrderBy(p => p.FullName))
+        foreach (var (commandName, commandInfo) in CommandDiscovery.DiscoveredCommands.OrderBy(kvp => kvp.Key))
         {
             table.AddRow(
-                problem.Name,
-                problem.Namespace ?? "[grey]<no namespace>[/]",
-                problem.Assembly.GetName().Name ?? "[grey]<unknown>[/]"
+                commandName,
+                commandInfo.Description ?? "[grey]<no description>[/]",
+                commandInfo.CommandType.FullName ?? "[grey]<unknown>[/]"
             );
         }
 
         AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine($"\n[green]Found {problems.Count} optimization problem(s).[/]");
+        AnsiConsole.MarkupLine($"\n[green]Found {CommandDiscovery.DiscoveredCommands.Count} optimization problem command(s).[/]");
+        AnsiConsole.MarkupLine("[dim]Use 'run-problem <command-name>' to run a specific optimization problem.[/]");
     }
 }
