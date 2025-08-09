@@ -31,9 +31,10 @@ public class UIManager : IDisposable
     private double _generationsPerSecond;
     private DateTime _startTime;
     private DateTime _lastGenerationTime;
-    private bool _isPaused;
+    private bool _isPaused = true; // Start paused in UI mode
     private bool _shouldExit;
     private bool _isOptimizationComplete;
+    private bool _isStopped = true; // Start stopped
     private string _statusMessage = "Initializing...";
 
     // UI Settings
@@ -61,7 +62,7 @@ public class UIManager : IDisposable
         // Start input handling task
         var inputTask = Task.Run(HandleInputAsync, _cancellationTokenSource.Token);
         
-        _statusMessage = "Running... Press 'h' for help";
+        _statusMessage = "Ready - Press 'space' to start or 'h' for help";
         
         try
         {
@@ -220,11 +221,11 @@ public class UIManager : IDisposable
     private Panel CreateControlsPanel()
     {
         var content = $"""
-            🎛️  CONTROLS
+            🎛️  MEDIA CONTROLS
             
-            [P]ause/Resume  [S]ave Results
-            [Q]uit          [+/-] Speed
-            [R]eset Stats   [Tab] Next View
+            [Space] Play/Pause   [S]top
+            [R]ewind to Start    [Q]uit
+            [+/-] Speed          [Ctrl+S] Save
             [H]elp
             """;
         
@@ -249,11 +250,17 @@ public class UIManager : IDisposable
 
     private Panel CreateFooter()
     {
-        var status = _isOptimizationComplete ? "✅ COMPLETED" : (_isPaused ? "⏸️  PAUSED" : "▶️  RUNNING");
+        var status = _isOptimizationComplete ? "✅ COMPLETED" : 
+                    _isStopped ? "⏹️  STOPPED" :
+                    _isPaused ? "⏸️  PAUSED" : "▶️  PLAYING";
         var content = $"💬 Status: {status} - {_statusMessage}";
         
+        var color = _isOptimizationComplete ? Color.Green :
+                   _isStopped ? Color.Red :
+                   _isPaused ? Color.Yellow : Color.Blue;
+        
         return new Panel(content)
-            .BorderColor(_isOptimizationComplete ? Color.Green : (_isPaused ? Color.Yellow : Color.Blue));
+            .BorderColor(color);
     }
 
     private string CreateAsciiChart(List<double> data, int width, int height)
@@ -324,51 +331,104 @@ public class UIManager : IDisposable
 
     private async Task HandleKeyPress(ConsoleKeyInfo keyInfo)
     {
-        switch (char.ToLower(keyInfo.KeyChar))
+        switch (keyInfo.Key)
         {
-            case 'p':
-                TogglePause();
+            case ConsoleKey.Spacebar:
+                TogglePlayPause();
                 break;
-            case 'q':
+            case ConsoleKey.Q:
                 _shouldExit = true;
                 break;
-            case 'h':
+            case ConsoleKey.H:
                 ShowHelp();
                 break;
-            case 's':
-                SaveResults();
+            case ConsoleKey.S:
+                if ((keyInfo.Modifiers & ConsoleModifiers.Control) != 0)
+                {
+                    SaveResults(); // Ctrl+S
+                }
+                else
+                {
+                    Stop(); // S for stop
+                }
                 break;
-            case 'r':
-                ResetStats();
+            case ConsoleKey.R:
+                Rewind();
                 break;
-            case '+':
-            case '=':
+            case ConsoleKey.OemPlus:
+            case ConsoleKey.Add:
                 IncreaseSpeed();
                 break;
-            case '-':
+            case ConsoleKey.OemMinus:
+            case ConsoleKey.Subtract:
                 DecreaseSpeed();
                 break;
         }
     }
 
-    private void TogglePause()
+    private void TogglePlayPause()
     {
-        _isPaused = !_isPaused;
-        _statusMessage = _isPaused ? "Paused - Press 'p' to resume" : "Running... Press 'h' for help";
+        if (_isStopped)
+        {
+            // Start from stopped state
+            _isStopped = false;
+            _isPaused = false;
+            _statusMessage = "Playing... Press 'space' to pause or 'h' for help";
+        }
+        else
+        {
+            // Toggle pause/play
+            _isPaused = !_isPaused;
+            _statusMessage = _isPaused ? "Paused - Press 'space' to resume" : "Playing... Press 'space' to pause";
+        }
+    }
+
+    private void Stop()
+    {
+        _isStopped = true;
+        _isPaused = true;
+        _statusMessage = "Stopped - Press 'space' to start or 'r' to rewind";
+    }
+
+    private void Rewind()
+    {
+        lock (_lockObject)
+        {
+            // Clear fitness history to restart visualization
+            _fitnessHistory.Clear();
+            _currentGeneration = 0;
+            _bestFitness = double.MaxValue;
+            _meanFitness = 0;
+            _stdFitness = 0;
+            _diversity = 0;
+            _convergenceRate = 0;
+            _startTime = DateTime.Now;
+            _lastGenerationTime = DateTime.Now;
+            _generationsPerSecond = 0;
+        }
+        
+        _isStopped = true;
+        _isPaused = true;
+        _isOptimizationComplete = false;
+        ShouldRestart = true; // Signal that algorithm should restart
+        _statusMessage = "Rewound to start - Press 'space' to play";
     }
 
     private Task ShowHelp()
     {
         var helpContent = """
-            🆘 HELP - INTERACTIVE CONTROLS
+            🆘 HELP - MEDIA PLAYER CONTROLS
             
-            [P] - Pause/Resume optimization
-            [Q] - Quit application  
+            [Space] - Play/Pause optimization (main control)
+            [S] - Stop optimization (can resume with space)
+            [R] - Rewind to beginning (reset all progress) 
+            [Q] - Quit application and show final results
             [H] - Show this help
-            [S] - Save current results to CSV
-            [R] - Reset performance statistics
-            [+] - Increase refresh rate (faster UI)
-            [-] - Decrease refresh rate (slower UI)
+            [Ctrl+S] - Save current results to CSV
+            [+] - Increase refresh rate (faster UI updates)
+            [-] - Decrease refresh rate (slower UI updates)
+            
+            🎬 The optimization starts paused - press Space to begin!
             
             Press any key to continue...
             """;
@@ -441,12 +501,19 @@ public class UIManager : IDisposable
     }
 
     public bool IsPaused => _isPaused;
+    public bool IsStopped => _isStopped; 
     public bool ShouldExit => _shouldExit;
+    public bool ShouldRestart { get; private set; }
 
     public void SetOptimizationComplete()
     {
         _isOptimizationComplete = true;
-        _statusMessage = "Optimization complete! Press 'q' to quit or 'h' for help";
+        _statusMessage = "Optimization complete! Press 'q' to quit, 'r' to rewind, or 'h' for help";
+    }
+    
+    public void ClearRestartFlag()
+    {
+        ShouldRestart = false;
     }
 
     public void Dispose()

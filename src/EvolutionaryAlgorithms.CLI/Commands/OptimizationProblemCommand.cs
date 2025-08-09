@@ -116,10 +116,17 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 generation.Population
             );
             
-            // Wait while paused - this blocks the generation loop
-            while (uiManager.IsPaused && !uiManager.ShouldExit)
+            // Wait while paused or stopped - this blocks the generation loop
+            while ((uiManager.IsPaused || uiManager.IsStopped) && !uiManager.ShouldExit)
             {
                 Task.Delay(100).Wait();
+            }
+            
+            // Check if user requested restart (rewind)
+            if (uiManager.ShouldRestart)
+            {
+                // Stop current optimization - user can restart manually
+                return; // This will exit the generation loop
             }
             
             // Add small delay between generations to make progress visible
