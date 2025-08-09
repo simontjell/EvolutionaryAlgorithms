@@ -57,29 +57,29 @@ public class UIManager : IDisposable
     public async Task StartAsync()
     {
         Console.CursorVisible = false;
-        AnsiConsole.Clear();
+        
+        _statusMessage = "Ready - Press 'space' to start or 'h' for help";
+        _currentGeneration = 0;
         
         // Start input handling task
         var inputTask = Task.Run(HandleInputAsync, _cancellationTokenSource.Token);
         
-        _statusMessage = "Ready - Press 'space' to start or 'h' for help";
-        
         try
         {
-            await AnsiConsole.Live(CreateLayout())
-                .AutoClear(false)
-                .StartAsync(async ctx =>
-                {
-                    while (!_shouldExit && !_cancellationTokenSource.Token.IsCancellationRequested)
-                    {
-                        if (!_isPaused)
-                        {
-                            ctx.UpdateTarget(CreateLayout());
-                        }
-                        
-                        await Task.Delay(_refreshRateMs, _cancellationTokenSource.Token);
-                    }
-                });
+            // Try a simpler approach first - display UI once to see if it works
+            var layout = CreateLayout();
+            AnsiConsole.Clear();
+            AnsiConsole.Write(layout);
+            
+            // Then start the live update loop
+            while (!_shouldExit && !_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                await Task.Delay(_refreshRateMs, _cancellationTokenSource.Token);
+                
+                // Update UI by clearing and redrawing
+                AnsiConsole.Clear();
+                AnsiConsole.Write(CreateLayout());
+            }
         }
         catch (OperationCanceledException)
         {
@@ -188,7 +188,7 @@ public class UIManager : IDisposable
         {
             if (_fitnessHistory.Count == 0)
             {
-                return new Panel("No data yet...")
+                return new Panel("Ready to start optimization...\n\nPress [Space] to begin")
                     .Header("📈 FITNESS EVOLUTION")
                     .BorderColor(Color.Green);
             }
