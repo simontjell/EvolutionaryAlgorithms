@@ -78,13 +78,18 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
 
         var algorithm = new DifferentialEvolution.DifferentialEvolution(problem, parameters, random);
 
+        // DEBUG: Check if UseUI is actually set
+        Console.WriteLine($"DEBUG: UseUI = {algorithmParams.UseUI}");
+        
         if (algorithmParams.UseUI)
         {
+            Console.WriteLine("DEBUG: Starting UI mode");
             // Use interactive UI
             RunOptimizationWithUI(algorithm, problem, algorithmParams).GetAwaiter().GetResult();
         }
         else
         {
+            Console.WriteLine("DEBUG: Starting console mode");
             // Use standard console output
             RunOptimizationConsole(algorithm, problem, algorithmParams);
         }

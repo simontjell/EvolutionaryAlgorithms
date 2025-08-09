@@ -58,7 +58,7 @@ public class UIManager : IDisposable
     {
         Console.CursorVisible = false;
         
-        _statusMessage = "Ready - Press 'space' to start or 'h' for help";
+        _statusMessage = "Ready - Press space to start";
         _currentGeneration = 0;
         
         // Start input handling task
@@ -66,19 +66,18 @@ public class UIManager : IDisposable
         
         try
         {
-            // Try a simpler approach first - display UI once to see if it works
-            var layout = CreateLayout();
+            // Simple working version - just show a basic panel first
+            var simplePanel = new Panel("Evolutionary Algorithm UI - Press [Space] to start optimization, [Q] to quit");
             AnsiConsole.Clear();
-            AnsiConsole.Write(layout);
+            AnsiConsole.Write(simplePanel);
             
-            // Then start the live update loop
+            // Update loop
             while (!_shouldExit && !_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 await Task.Delay(_refreshRateMs, _cancellationTokenSource.Token);
                 
-                // Update UI by clearing and redrawing
                 AnsiConsole.Clear();
-                AnsiConsole.Write(CreateLayout());
+                AnsiConsole.Write(new Panel($"Status: {(_isStopped ? "STOPPED" : _isPaused ? "PAUSED" : "RUNNING")}\nGeneration: {_currentGeneration}\nBest Fitness: {_bestFitness:F6}\n\nPress [Space] to play/pause, [Q] to quit, [H] for help"));
             }
         }
         catch (OperationCanceledException)
@@ -135,6 +134,7 @@ public class UIManager : IDisposable
     /// </summary>
     private Layout CreateLayout()
     {
+        Console.WriteLine("DEBUG: CreateLayout() - Creating root layout");
         var layout = new Layout("Root")
             .SplitRows(
                 new Layout("Header").Size(3),
@@ -142,125 +142,93 @@ public class UIManager : IDisposable
                 new Layout("Footer").Size(3)
             );
 
+        Console.WriteLine("DEBUG: CreateLayout() - Creating header");
         // Header
         layout["Header"].Update(CreateHeader());
         
+        Console.WriteLine("DEBUG: CreateLayout() - Splitting content");
         // Content split into left and right panels
         layout["Content"].SplitColumns(
             new Layout("Left"),
             new Layout("Right").Size(30)
         );
         
+        Console.WriteLine("DEBUG: CreateLayout() - Creating fitness chart");
         layout["Content"]["Left"].Update(CreateFitnessChart());
+        
+        Console.WriteLine("DEBUG: CreateLayout() - Splitting right panel");
         layout["Content"]["Right"].SplitRows(
             new Layout("Stats").Size(8),
             new Layout("Controls").Size(6),
             new Layout("Parameters")
         );
         
+        Console.WriteLine("DEBUG: CreateLayout() - Creating panels");
+        Console.WriteLine("DEBUG: CreateLayout() - Creating stats panel");
         layout["Content"]["Right"]["Stats"].Update(CreateStatsPanel());
+        Console.WriteLine("DEBUG: CreateLayout() - Creating controls panel");
         layout["Content"]["Right"]["Controls"].Update(CreateControlsPanel());
+        Console.WriteLine("DEBUG: CreateLayout() - Creating parameters panel");
         layout["Content"]["Right"]["Parameters"].Update(CreateParametersPanel());
         
+        Console.WriteLine("DEBUG: CreateLayout() - Creating footer");
         // Footer
         layout["Footer"].Update(CreateFooter());
 
+        Console.WriteLine("DEBUG: CreateLayout() - Layout complete");
         return layout;
     }
 
     private Panel CreateHeader()
     {
-        var title = $"🧬 Differential Evolution - {_problemName}";
-        var metrics = $"⏱️  Generation: {_currentGeneration}/{_parameters.MaxGenerations}        🎯 Best Fitness: {_bestFitness:F6}";
-        var stats = $"👥 Population: {_parameters.PopulationSize}            🔥 Convergence: {_convergenceRate:F1}%";
-        var performance = $"⚡ Speed: {_generationsPerSecond:F1} gen/sec        📊 Diversity: {_diversity:F3}";
-        
-        var content = $"{metrics}\n{stats}\n{performance}";
-        
-        return new Panel(content)
-            .Header(title)
-            .BorderColor(_isPaused ? Color.Yellow : Color.Blue);
+        var content = $"Differential Evolution - Gen: {_currentGeneration}/{_parameters.MaxGenerations}";
+        return new Panel(content);
     }
 
     private Panel CreateFitnessChart()
     {
-        lock (_lockObject)
+        Console.WriteLine("DEBUG: CreateFitnessChart() - Start");
+        // Remove lock for now to see if that's causing the hang
+        Console.WriteLine($"DEBUG: CreateFitnessChart() - Fitness history count: {_fitnessHistory.Count}");
+        if (_fitnessHistory.Count == 0)
         {
-            if (_fitnessHistory.Count == 0)
-            {
-                return new Panel("Ready to start optimization...\n\nPress [Space] to begin")
-                    .Header("📈 FITNESS EVOLUTION")
-                    .BorderColor(Color.Green);
-            }
-
-            var chart = CreateAsciiChart(_fitnessHistory, 25, 10);
-            
-            return new Panel(chart)
-                .Header("📈 FITNESS EVOLUTION")
-                .BorderColor(Color.Green);
+            Console.WriteLine("DEBUG: CreateFitnessChart() - Creating simple panel");
+            // Try the absolute simplest panel possible
+            return new Panel("No data yet");
         }
+
+        Console.WriteLine("DEBUG: CreateFitnessChart() - Creating ASCII chart");
+        var chart = CreateAsciiChart(_fitnessHistory, 25, 10);
+        
+        Console.WriteLine("DEBUG: CreateFitnessChart() - Creating panel with chart");
+        return new Panel(chart)
+            .Header("📈 FITNESS EVOLUTION")
+            .BorderColor(Color.Green);
     }
 
     private Panel CreateStatsPanel()
     {
-        var content = $"""
-            🧪 CURRENT GENERATION
-            
-              Best Individual
-              Fitness: {_bestFitness:F6}
-            
-              Population Stats
-              Mean:   {_meanFitness:F4}
-              Std:    {_stdFitness:F4}
-            """;
-        
-        return new Panel(content)
-            .BorderColor(Color.Blue);
+        var content = $"Best: {_bestFitness:F6}\nMean: {_meanFitness:F4}";
+        return new Panel(content);
     }
 
     private Panel CreateControlsPanel()
     {
-        var content = $"""
-            🎛️  MEDIA CONTROLS
-            
-            [Space] Play/Pause   [S]top
-            [R]ewind to Start    [Q]uit
-            [+/-] Speed          [Ctrl+S] Save
-            [H]elp
-            """;
-        
-        return new Panel(content)
-            .BorderColor(Color.Yellow);
+        var content = "[Space] Play/Pause [Q]uit [H]elp";
+        return new Panel(content);
     }
 
     private Panel CreateParametersPanel()
     {
-        var content = $"""
-            📋 ALGORITHM PARAMETERS
-            
-            Population:     {_parameters.PopulationSize}
-            Crossover (CR): {_parameters.CrossoverRate}
-            Factor (F):     {_parameters.DifferentialWeight}
-            Seed:           {_parameters.Seed?.ToString() ?? "Random"}
-            """;
-        
-        return new Panel(content)
-            .BorderColor(Color.Red);
+        var content = $"Pop: {_parameters.PopulationSize}\nGen: {_currentGeneration}/{_parameters.MaxGenerations}";
+        return new Panel(content);
     }
 
     private Panel CreateFooter()
     {
-        var status = _isOptimizationComplete ? "✅ COMPLETED" : 
-                    _isStopped ? "⏹️  STOPPED" :
-                    _isPaused ? "⏸️  PAUSED" : "▶️  PLAYING";
-        var content = $"💬 Status: {status} - {_statusMessage}";
-        
-        var color = _isOptimizationComplete ? Color.Green :
-                   _isStopped ? Color.Red :
-                   _isPaused ? Color.Yellow : Color.Blue;
-        
-        return new Panel(content)
-            .BorderColor(color);
+        var status = _isStopped ? "STOPPED" : _isPaused ? "PAUSED" : "RUNNING";
+        var content = $"Status: {status} - {_statusMessage}";
+        return new Panel(content);
     }
 
     private string CreateAsciiChart(List<double> data, int width, int height)

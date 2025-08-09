@@ -41,6 +41,6 @@ public abstract class OptimizationSettingsBase : CommandSettings
     public string? OutputCsv { get; init; }
 
     [Description("Show interactive UI during optimization")]
-    [CommandOption("--ui")]
+    [CommandOption("--ui|--use-ui")]
     public bool UseUI { get; init; }
 }
