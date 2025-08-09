@@ -192,12 +192,12 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
         
         // Set up Ctrl-C handler to restore cursor
-        var originalCancelHandler = Console.CancelKeyPress;
-        Console.CancelKeyPress += (sender, e) =>
+        ConsoleCancelEventHandler cancelHandler = (sender, e) =>
         {
             Console.CursorVisible = true;
-            // Don't cancel, let the normal handler take over
+            // Don't prevent cancellation, just restore cursor
         };
+        Console.CancelKeyPress += cancelHandler;
         
         // Use Live display to avoid flickering
         try
@@ -257,6 +257,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         {
             // Always ensure cursor is restored, even if an exception occurs
             Console.CursorVisible = true;
+            // Remove the cancel handler
+            Console.CancelKeyPress -= cancelHandler;
         }
         
         DisplayResults(algorithm, algorithmParams);
