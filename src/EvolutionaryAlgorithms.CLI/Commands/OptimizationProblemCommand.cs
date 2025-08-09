@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -78,18 +79,13 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
 
         var algorithm = new DifferentialEvolution.DifferentialEvolution(problem, parameters, random);
 
-        // DEBUG: Check if UseUI is actually set
-        Console.WriteLine($"DEBUG: UseUI = {algorithmParams.UseUI}");
-        
         if (algorithmParams.UseUI)
         {
-            Console.WriteLine("DEBUG: Starting UI mode");
-            // Use interactive UI
-            RunOptimizationWithUI(algorithm, problem, algorithmParams).GetAwaiter().GetResult();
+            // Use Spectre.Console panels but without interactive input
+            RunOptimizationWithPanelUI(algorithm, problem, algorithmParams);
         }
         else
         {
-            Console.WriteLine("DEBUG: Starting console mode");
             // Use standard console output
             RunOptimizationConsole(algorithm, problem, algorithmParams);
         }
@@ -179,6 +175,183 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         {
             DisplayResults(algorithm, algorithmParams);
         }
+    }
+
+    private static void RunOptimizationWithPanelUI(DifferentialEvolution.DifferentialEvolution algorithm, IOptimizationProblem problem, AlgorithmParameters algorithmParams)
+    {
+        var problemName = problem.GetType().Name;
+        var currentGeneration = 0;
+        var bestFitness = double.MaxValue;
+        var meanFitness = 0.0;
+        var stdFitness = 0.0;
+        var fitnessHistory = new List<double>();
+        
+        // Show initial UI
+        DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "STARTING");
+        
+        // Set up event handler for real-time panel updates
+        algorithm.OnGenerationFinished += (sender, args) =>
+        {
+            var generation = algorithm.Generations.Last();
+            var bestIndividuals = algorithm.GetBestIndividuals(generation);
+            bestFitness = bestIndividuals.First().FitnessValues.First();
+            
+            // Calculate population statistics
+            var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+            meanFitness = allFitnesses.Average();
+            stdFitness = allFitnesses.Length > 1 ? 
+                Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+            
+            currentGeneration = algorithm.Generations.Count;
+            fitnessHistory.Add(bestFitness);
+            if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+            
+            // Update panel UI
+            DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "RUNNING");
+        };
+
+        algorithm.Optimize();
+        
+        // Show final UI
+        DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "COMPLETED");
+        
+        DisplayResults(algorithm, algorithmParams);
+    }
+    
+    private static void DisplayPanelUI(string problemName, AlgorithmParameters parameters, int generation, double bestFitness, double meanFitness, double stdFitness, List<double> fitnessHistory, string status)
+    {
+        AnsiConsole.Clear();
+        
+        // Create main layout
+        var layout = new Layout("Root")
+            .SplitRows(
+                new Layout("Header").Size(4),
+                new Layout("Content"),
+                new Layout("Footer").Size(3)
+            );
+
+        // Header Panel
+        var headerContent = $"🧬 Differential Evolution - {problemName}\n" +
+                           $"Generation: {generation}/{parameters.MaxGenerations}  |  Best Fitness: {bestFitness:F6}\n" +
+                           $"Population: {parameters.PopulationSize}  |  Status: {status}";
+        
+        layout["Header"].Update(
+            new Panel(headerContent)
+                .Header("OPTIMIZATION DASHBOARD")
+                .BorderColor(status == "COMPLETED" ? Color.Green : status == "RUNNING" ? Color.Blue : Color.Yellow)
+        );
+
+        // Content - split into left and right
+        layout["Content"].SplitColumns(
+            new Layout("Chart"),
+            new Layout("Stats").Size(40)
+        );
+
+        // Fitness Chart
+        var chartContent = CreateSimpleFitnessChart(fitnessHistory);
+        layout["Content"]["Chart"].Update(
+            new Panel(chartContent)
+                .Header("📈 FITNESS EVOLUTION")
+                .BorderColor(Color.Green)
+        );
+
+        // Statistics Panel  
+        var statsContent = $"📊 CURRENT STATISTICS\n\n" +
+                          $"Best Individual:\n" +
+                          $"  Fitness: {bestFitness:F6}\n\n" +
+                          $"Population Stats:\n" +
+                          $"  Mean:   {meanFitness:F6}\n" +
+                          $"  Std:    {stdFitness:F6}\n\n" +
+                          $"Algorithm Parameters:\n" +
+                          $"  Population: {parameters.PopulationSize}\n" +
+                          $"  CR: {parameters.CrossoverRate}\n" +
+                          $"  F: {parameters.DifferentialWeight}";
+
+        layout["Content"]["Stats"].Update(
+            new Panel(statsContent)
+                .BorderColor(Color.Blue)
+        );
+
+        // Footer
+        var progress = parameters.MaxGenerations > 0 ? (double)generation / parameters.MaxGenerations : 0;
+        var progressBar = CreateProgressBar(progress, 30);
+        var footerContent = $"Progress: {progressBar} {progress:P1} | Status: {status}";
+        
+        layout["Footer"].Update(
+            new Panel(footerContent)
+                .BorderColor(Color.White)
+        );
+
+        // Render the complete UI
+        AnsiConsole.Write(layout);
+    }
+    
+    private static string CreateSimpleFitnessChart(List<double> history)
+    {
+        if (history.Count == 0) return "No data yet - optimization will start soon...";
+        
+        var result = new List<string>();
+        result.Add("Fitness over last " + Math.Min(20, history.Count) + " generations:");
+        result.Add("");
+        
+        var min = history.Min();
+        var max = history.Max();
+        var range = max - min;
+        if (range == 0) range = 1;
+        
+        for (int i = 0; i < history.Count; i++)
+        {
+            var normalized = (history[i] - min) / range;
+            var barLength = (int)(normalized * 40);
+            var bar = new string('█', Math.Max(1, barLength));
+            result.Add($"Gen {i + 1,2}: {bar} ({history[i]:F6})");
+        }
+        
+        return string.Join("\n", result);
+    }
+    
+    private static string CreateProgressBar(double progress, int width)
+    {
+        var filled = (int)(progress * width);
+        return $"{new string('#', filled)}{new string('.', width - filled)}";
+    }
+
+    private static void RunOptimizationWithUIProgress(DifferentialEvolution.DifferentialEvolution algorithm, IOptimizationProblem problem, AlgorithmParameters algorithmParams)
+    {
+        Console.WriteLine("🎬 Starting optimization with UI-style progress display...");
+        
+        // Set up event handler for UI-style progress updates
+        algorithm.OnGenerationFinished += (sender, args) =>
+        {
+            var generation = algorithm.Generations.Last();
+            var bestIndividuals = algorithm.GetBestIndividuals(generation);
+            var bestFitness = bestIndividuals.First().FitnessValues.First();
+            
+            // Calculate population statistics
+            var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+            var meanFitness = allFitnesses.Average();
+            var stdFitness = allFitnesses.Length > 1 ? 
+                Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+            
+            // Display UI-style progress
+            Console.WriteLine($"📈 Generation {algorithm.Generations.Count,4}: Best={bestFitness:F6}, Mean={meanFitness:F6}, Std={stdFitness:F6}");
+            
+            // Show progress bar every 10 generations
+            if (algorithm.Generations.Count % 10 == 0)
+            {
+                var progress = (double)algorithm.Generations.Count / algorithmParams.MaxGenerations;
+                var progressBarWidth = 30;
+                var filled = (int)(progress * progressBarWidth);
+                var progressBar = new string('█', filled) + new string('░', progressBarWidth - filled);
+                Console.WriteLine($"📊 Progress: [{progressBar}] {progress:P1}");
+            }
+        };
+
+        Console.WriteLine("▶️  Optimization running...");
+        algorithm.Optimize();
+        
+        Console.WriteLine("\n🎉 Optimization completed!");
+        DisplayResults(algorithm, algorithmParams);
     }
 
     private static void RunOptimizationConsole(DifferentialEvolution.DifferentialEvolution algorithm, IOptimizationProblem problem, AlgorithmParameters algorithmParams)

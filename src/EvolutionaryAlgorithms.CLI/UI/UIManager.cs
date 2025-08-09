@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,19 +67,37 @@ public class UIManager : IDisposable
         
         try
         {
+            // Log to file what UI should show
+            var logFile = "/home/simon/src/simontjell/EvolutionaryAlgorithms/ui-debug.txt";
+            File.WriteAllText(logFile, "UI Debug Log - Starting UI\n");
+            
             // Simple working version - just show a basic panel first
             var simplePanel = new Panel("Evolutionary Algorithm UI - Press [Space] to start optimization, [Q] to quit");
+            File.AppendAllText(logFile, "Panel created: " + simplePanel.ToString() + "\n");
+            
             AnsiConsole.Clear();
+            File.AppendAllText(logFile, "Screen cleared\n");
+            
             AnsiConsole.Write(simplePanel);
+            File.AppendAllText(logFile, "Panel written to console\n");
             
             // Update loop
+            int updateCount = 0;
             while (!_shouldExit && !_cancellationTokenSource.Token.IsCancellationRequested)
             {
                 await Task.Delay(_refreshRateMs, _cancellationTokenSource.Token);
+                updateCount++;
+                
+                File.AppendAllText(logFile, $"Update #{updateCount}: Generation={_currentGeneration}, Fitness={_bestFitness}, Status={(_isStopped ? "STOPPED" : _isPaused ? "PAUSED" : "RUNNING")}\n");
                 
                 AnsiConsole.Clear();
-                AnsiConsole.Write(new Panel($"Status: {(_isStopped ? "STOPPED" : _isPaused ? "PAUSED" : "RUNNING")}\nGeneration: {_currentGeneration}\nBest Fitness: {_bestFitness:F6}\n\nPress [Space] to play/pause, [Q] to quit, [H] for help"));
+                var updatePanel = new Panel($"Status: {(_isStopped ? "STOPPED" : _isPaused ? "PAUSED" : "RUNNING")}\nGeneration: {_currentGeneration}\nBest Fitness: {_bestFitness:F6}\n\nPress [Space] to play/pause, [Q] to quit, [H] for help");
+                AnsiConsole.Write(updatePanel);
+                
+                if (updateCount >= 10) break; // Limit for testing
             }
+            
+            File.AppendAllText(logFile, "UI loop ended\n");
         }
         catch (OperationCanceledException)
         {
