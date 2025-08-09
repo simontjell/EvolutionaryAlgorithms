@@ -248,7 +248,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         );
 
         // Fitness Chart
-        var chartContent = CreateSimpleFitnessChart(fitnessHistory);
+        var chartContent = CreateSimpleFitnessChart(fitnessHistory, generation);
         layout["Content"]["Chart"].Update(
             new Panel(chartContent)
                 .Header("📈 FITNESS EVOLUTION")
@@ -286,7 +286,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         AnsiConsole.Write(layout);
     }
     
-    private static string CreateSimpleFitnessChart(List<double> history)
+    private static string CreateSimpleFitnessChart(List<double> history, int currentGeneration)
     {
         if (history.Count == 0) return "No data yet - optimization will start soon...";
         
@@ -299,12 +299,16 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var range = max - min;
         if (range == 0) range = 1;
         
+        // Calculate starting generation number for auto-scrolling
+        var startGeneration = Math.Max(1, currentGeneration - history.Count + 1);
+        
         for (int i = 0; i < history.Count; i++)
         {
             var normalized = (history[i] - min) / range;
             var barLength = (int)(normalized * 40);
             var bar = new string('█', Math.Max(1, barLength));
-            result.Add($"Gen {i + 1,2}: {bar} ({history[i]:F6})");
+            var genNumber = startGeneration + i;
+            result.Add($"Gen {genNumber,2}: {bar} ({history[i]:F6})");
         }
         
         return string.Join("\n", result);
