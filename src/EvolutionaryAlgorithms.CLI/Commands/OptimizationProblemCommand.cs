@@ -191,57 +191,73 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         // Create initial layout
         var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
         
+        // Set up Ctrl-C handler to restore cursor
+        var originalCancelHandler = Console.CancelKeyPress;
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            Console.CursorVisible = true;
+            // Don't cancel, let the normal handler take over
+        };
+        
         // Use Live display to avoid flickering
-        AnsiConsole.Live(layout)
-            .AutoClear(false)
-            .Overflow(VerticalOverflow.Ellipsis)
-            .Cropping(VerticalOverflowCropping.Top)
-            .Start(ctx =>
-            {
-                // Set up event handler for real-time updates
-                algorithm.OnGenerationFinished += (sender, args) =>
+        try
+        {
+            AnsiConsole.Live(layout)
+                .AutoClear(false)
+                .Overflow(VerticalOverflow.Ellipsis)
+                .Cropping(VerticalOverflowCropping.Top)
+                .Start(ctx =>
                 {
-                    var generation = algorithm.Generations.Last();
-                    var bestIndividuals = algorithm.GetBestIndividuals(generation);
-                    var newBestFitness = bestIndividuals.First().FitnessValues.First();
-                    
-                    // Calculate population statistics
-                    var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
-                    meanFitness = allFitnesses.Average();
-                    stdFitness = allFitnesses.Length > 1 ? 
-                        Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
-                    
-                    currentGeneration = algorithm.Generations.Count;
-                    
-                    // Only add to fitness history if fitness improved (for single-objective optimization)
-                    // For minimization problems, improvement means lower fitness value
-                    var isFirstGeneration = fitnessHistory.Count == 0;
-                    var hasImproved = isFirstGeneration || newBestFitness < bestFitness;
-                    
-                    if (hasImproved)
+                    // Set up event handler for real-time updates
+                    algorithm.OnGenerationFinished += (sender, args) =>
                     {
-                        bestFitness = newBestFitness;
-                        fitnessHistory.Add(bestFitness);
-                        if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
-                    }
-                    
-                    status = "RUNNING";
-                    
-                    // Update the layout without flickering
-                    var updatedLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
-                    ctx.UpdateTarget(updatedLayout);
-                };
+                        var generation = algorithm.Generations.Last();
+                        var bestIndividuals = algorithm.GetBestIndividuals(generation);
+                        var newBestFitness = bestIndividuals.First().FitnessValues.First();
+                        
+                        // Calculate population statistics
+                        var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+                        meanFitness = allFitnesses.Average();
+                        stdFitness = allFitnesses.Length > 1 ? 
+                            Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+                        
+                        currentGeneration = algorithm.Generations.Count;
+                        
+                        // Only add to fitness history if fitness improved (for single-objective optimization)
+                        // For minimization problems, improvement means lower fitness value
+                        var isFirstGeneration = fitnessHistory.Count == 0;
+                        var hasImproved = isFirstGeneration || newBestFitness < bestFitness;
+                        
+                        if (hasImproved)
+                        {
+                            bestFitness = newBestFitness;
+                            fitnessHistory.Add(bestFitness);
+                            if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                        }
+                        
+                        status = "RUNNING";
+                        
+                        // Update the layout without flickering
+                        var updatedLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+                        ctx.UpdateTarget(updatedLayout);
+                    };
 
-                algorithm.Optimize();
-                
-                // Final update
-                status = "COMPLETED";
-                var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
-                ctx.UpdateTarget(finalLayout);
-                
-                // Hold the display briefly to show completion
-                Thread.Sleep(1000);
-            });
+                    algorithm.Optimize();
+                    
+                    // Final update
+                    status = "COMPLETED";
+                    var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+                    ctx.UpdateTarget(finalLayout);
+                    
+                    // Hold the display briefly to show completion
+                    Thread.Sleep(1000);
+                });
+        }
+        finally
+        {
+            // Always ensure cursor is restored, even if an exception occurs
+            Console.CursorVisible = true;
+        }
         
         DisplayResults(algorithm, algorithmParams);
     }
