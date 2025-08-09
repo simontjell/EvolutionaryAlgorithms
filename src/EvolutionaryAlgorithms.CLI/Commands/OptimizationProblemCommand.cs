@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -185,43 +186,58 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var meanFitness = 0.0;
         var stdFitness = 0.0;
         var fitnessHistory = new List<double>();
+        var status = "STARTING";
         
-        // Show initial UI
-        DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "STARTING");
+        // Create initial layout
+        var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
         
-        // Set up event handler for real-time panel updates
-        algorithm.OnGenerationFinished += (sender, args) =>
-        {
-            var generation = algorithm.Generations.Last();
-            var bestIndividuals = algorithm.GetBestIndividuals(generation);
-            bestFitness = bestIndividuals.First().FitnessValues.First();
-            
-            // Calculate population statistics
-            var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
-            meanFitness = allFitnesses.Average();
-            stdFitness = allFitnesses.Length > 1 ? 
-                Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
-            
-            currentGeneration = algorithm.Generations.Count;
-            fitnessHistory.Add(bestFitness);
-            if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
-            
-            // Update panel UI
-            DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "RUNNING");
-        };
+        // Use Live display to avoid flickering
+        AnsiConsole.Live(layout)
+            .AutoClear(false)
+            .Overflow(VerticalOverflow.Ellipsis)
+            .Cropping(VerticalOverflowCropping.Top)
+            .Start(ctx =>
+            {
+                // Set up event handler for real-time updates
+                algorithm.OnGenerationFinished += (sender, args) =>
+                {
+                    var generation = algorithm.Generations.Last();
+                    var bestIndividuals = algorithm.GetBestIndividuals(generation);
+                    bestFitness = bestIndividuals.First().FitnessValues.First();
+                    
+                    // Calculate population statistics
+                    var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+                    meanFitness = allFitnesses.Average();
+                    stdFitness = allFitnesses.Length > 1 ? 
+                        Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+                    
+                    currentGeneration = algorithm.Generations.Count;
+                    fitnessHistory.Add(bestFitness);
+                    if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                    
+                    status = "RUNNING";
+                    
+                    // Update the layout without flickering
+                    var updatedLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+                    ctx.UpdateTarget(updatedLayout);
+                };
 
-        algorithm.Optimize();
-        
-        // Show final UI
-        DisplayPanelUI(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, "COMPLETED");
+                algorithm.Optimize();
+                
+                // Final update
+                status = "COMPLETED";
+                var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+                ctx.UpdateTarget(finalLayout);
+                
+                // Hold the display briefly to show completion
+                Thread.Sleep(1000);
+            });
         
         DisplayResults(algorithm, algorithmParams);
     }
     
-    private static void DisplayPanelUI(string problemName, AlgorithmParameters parameters, int generation, double bestFitness, double meanFitness, double stdFitness, List<double> fitnessHistory, string status)
+    private static Layout CreatePanelLayout(string problemName, AlgorithmParameters parameters, int generation, double bestFitness, double meanFitness, double stdFitness, List<double> fitnessHistory, string status)
     {
-        AnsiConsole.Clear();
-        
         // Create main layout
         var layout = new Layout("Root")
             .SplitRows(
@@ -282,8 +298,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 .BorderColor(Color.White)
         );
 
-        // Render the complete UI
-        AnsiConsole.Write(layout);
+        return layout;
     }
     
     private static string CreateSimpleFitnessChart(List<double> history, int currentGeneration)
