@@ -33,6 +33,7 @@ public class UIManager : IDisposable
     private DateTime _lastGenerationTime;
     private bool _isPaused;
     private bool _shouldExit;
+    private bool _isOptimizationComplete;
     private string _statusMessage = "Initializing...";
 
     // UI Settings
@@ -248,11 +249,11 @@ public class UIManager : IDisposable
 
     private Panel CreateFooter()
     {
-        var status = _isPaused ? "⏸️  PAUSED" : "▶️  RUNNING";
+        var status = _isOptimizationComplete ? "✅ COMPLETED" : (_isPaused ? "⏸️  PAUSED" : "▶️  RUNNING");
         var content = $"💬 Status: {status} - {_statusMessage}";
         
         return new Panel(content)
-            .BorderColor(_isPaused ? Color.Yellow : Color.Green);
+            .BorderColor(_isOptimizationComplete ? Color.Green : (_isPaused ? Color.Yellow : Color.Blue));
     }
 
     private string CreateAsciiChart(List<double> data, int width, int height)
@@ -441,6 +442,12 @@ public class UIManager : IDisposable
 
     public bool IsPaused => _isPaused;
     public bool ShouldExit => _shouldExit;
+
+    public void SetOptimizationComplete()
+    {
+        _isOptimizationComplete = true;
+        _statusMessage = "Optimization complete! Press 'q' to quit or 'h' for help";
+    }
 
     public void Dispose()
     {

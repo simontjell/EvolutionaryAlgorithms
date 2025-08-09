@@ -115,6 +115,18 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 stdFitness,
                 generation.Population
             );
+            
+            // Wait while paused - this blocks the generation loop
+            while (uiManager.IsPaused && !uiManager.ShouldExit)
+            {
+                Task.Delay(100).Wait();
+            }
+            
+            // Add small delay between generations to make progress visible
+            if (!uiManager.ShouldExit)
+            {
+                Task.Delay(50).Wait();
+            }
         };
         
         // Start UI in background task
@@ -125,19 +137,11 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         {
             try
             {
-                while (!uiManager.ShouldExit)
-                {
-                    if (!uiManager.IsPaused)
-                    {
-                        // Run one generation step (this would require breaking down Optimize method)
-                        algorithm.Optimize(); // For now, run all at once
-                        break; // Exit after complete optimization for now
-                    }
-                    else
-                    {
-                        Task.Delay(100).Wait(); // Wait while paused
-                    }
-                }
+                // Give UI time to start up
+                Task.Delay(500).Wait();
+                
+                algorithm.Optimize(); // Run complete optimization - events handle pausing
+                uiManager.SetOptimizationComplete();
             }
             catch (Exception ex)
             {
@@ -145,17 +149,21 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
             }
         });
         
-        // Wait for either task to complete
+        // Wait for either task to complete or user to quit
         await Task.WhenAny(uiTask, optimizationTask);
         
-        // If optimization completed, wait a bit more for user to see results
+        // If optimization completed, keep UI running until user exits
         if (optimizationTask.IsCompleted && !uiManager.ShouldExit)
         {
-            await Task.Delay(2000); // Show final results for 2 seconds
+            // Wait for user to quit manually with 'q'
+            while (!uiManager.ShouldExit)
+            {
+                await Task.Delay(100);
+            }
         }
         
-        // Display final results if not using UI or if UI was exited
-        if (uiManager.ShouldExit || optimizationTask.IsCompleted)
+        // Display final results if UI was exited
+        if (uiManager.ShouldExit)
         {
             DisplayResults(algorithm, algorithmParams);
         }
