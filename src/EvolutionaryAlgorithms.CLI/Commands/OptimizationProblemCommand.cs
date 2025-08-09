@@ -203,7 +203,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 {
                     var generation = algorithm.Generations.Last();
                     var bestIndividuals = algorithm.GetBestIndividuals(generation);
-                    bestFitness = bestIndividuals.First().FitnessValues.First();
+                    var newBestFitness = bestIndividuals.First().FitnessValues.First();
                     
                     // Calculate population statistics
                     var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
@@ -212,8 +212,18 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                         Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
                     
                     currentGeneration = algorithm.Generations.Count;
-                    fitnessHistory.Add(bestFitness);
-                    if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                    
+                    // Only add to fitness history if fitness improved (for single-objective optimization)
+                    // For minimization problems, improvement means lower fitness value
+                    var isFirstGeneration = fitnessHistory.Count == 0;
+                    var hasImproved = isFirstGeneration || newBestFitness < bestFitness;
+                    
+                    if (hasImproved)
+                    {
+                        bestFitness = newBestFitness;
+                        fitnessHistory.Add(bestFitness);
+                        if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                    }
                     
                     status = "RUNNING";
                     
@@ -306,7 +316,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         if (history.Count == 0) return "No data yet - optimization will start soon...";
         
         var result = new List<string>();
-        result.Add("Fitness over last " + Math.Min(20, history.Count) + " generations:");
+        result.Add("Fitness improvements (last " + Math.Min(20, history.Count) + " shown):");
         result.Add("");
         
         var min = history.Min();
@@ -314,16 +324,14 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var range = max - min;
         if (range == 0) range = 1;
         
-        // Calculate starting generation number for auto-scrolling
-        var startGeneration = Math.Max(1, currentGeneration - history.Count + 1);
-        
+        // Show improvements chronologically
         for (int i = 0; i < history.Count; i++)
         {
             var normalized = (history[i] - min) / range;
             var barLength = (int)(normalized * 40);
             var bar = new string('█', Math.Max(1, barLength));
-            var genNumber = startGeneration + i;
-            result.Add($"Gen {genNumber,2}: {bar} ({history[i]:F6})");
+            var improvementNumber = i + 1;
+            result.Add($"#{improvementNumber,2}: {bar} ({history[i]:F6})");
         }
         
         return string.Join("\n", result);
