@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -186,20 +187,27 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var meanFitness = 0.0;
         var stdFitness = 0.0;
         var fitnessHistory = new List<double>();
-        var status = "STARTING";
+        var paretoFront = new List<ParetoEvaluatedIndividual>();
+        var allIndividuals = new List<ParetoEvaluatedIndividual>();
+        var status = "PAUSED";
+        var isPaused = true;
+        var shouldStep = false;
+        var shouldExit = false;
+        var isInitialized = false;
         
         // Create initial layout
-        var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+        var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
         
         // Set up Ctrl-C handler to restore cursor
         ConsoleCancelEventHandler cancelHandler = (sender, e) =>
         {
             Console.CursorVisible = true;
-            // Don't prevent cancellation, just restore cursor
+            shouldExit = true;
+            e.Cancel = true; // Don't exit immediately, let us clean up
         };
         Console.CancelKeyPress += cancelHandler;
         
-        // Use Live display to avoid flickering
+        // Use Live display for interactive control
         try
         {
             AnsiConsole.Live(layout)
@@ -208,48 +216,150 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 .Cropping(VerticalOverflowCropping.Top)
                 .Start(ctx =>
                 {
-                    // Set up event handler for real-time updates
-                    algorithm.OnGenerationFinished += (sender, args) =>
+                    // Update initial display
+                    ctx.UpdateTarget(layout);
+                    
+                    // Main interactive loop
+                    while (!shouldExit && currentGeneration < algorithmParams.MaxGenerations)
                     {
-                        var generation = algorithm.Generations.Last();
-                        var bestIndividuals = algorithm.GetBestIndividuals(generation);
-                        var newBestFitness = bestIndividuals.First().FitnessValues.First();
-                        
-                        // Calculate population statistics
-                        var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
-                        meanFitness = allFitnesses.Average();
-                        stdFitness = allFitnesses.Length > 1 ? 
-                            Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
-                        
-                        currentGeneration = algorithm.Generations.Count;
-                        
-                        // Only add to fitness history if fitness improved (for single-objective optimization)
-                        // For minimization problems, improvement means lower fitness value
-                        var isFirstGeneration = fitnessHistory.Count == 0;
-                        var hasImproved = isFirstGeneration || newBestFitness < bestFitness;
-                        
-                        if (hasImproved)
+                        // Handle keyboard input
+                        if (Console.KeyAvailable)
                         {
-                            bestFitness = newBestFitness;
-                            fitnessHistory.Add(bestFitness);
-                            if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                            var key = Console.ReadKey(true);
+                            switch (key.Key)
+                            {
+                                case ConsoleKey.Spacebar:
+                                    isPaused = !isPaused;
+                                    status = isPaused ? "PAUSED" : "RUNNING";
+                                    break;
+                                case ConsoleKey.RightArrow:
+                                case ConsoleKey.Enter:
+                                    if (isPaused)
+                                    {
+                                        shouldStep = true;
+                                    }
+                                    break;
+                                case ConsoleKey.Q:
+                                case ConsoleKey.Escape:
+                                    shouldExit = true;
+                                    break;
+                            }
+                            
+                            // Update layout with new status
+                            var statusLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
+                            ctx.UpdateTarget(statusLayout);
                         }
                         
-                        status = "RUNNING";
-                        
-                        // Update the layout without flickering
-                        var updatedLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
-                        ctx.UpdateTarget(updatedLayout);
-                    };
-
-                    algorithm.Optimize();
+                        // Initialize optimization if not done yet
+                        if (!isInitialized && (!isPaused || shouldStep))
+                        {
+                            isInitialized = true;
+                            shouldStep = false;
+                            
+                            // Set up event handler to control step-by-step execution  
+                            var wasRunning = false;
+                            algorithm.OnGenerationFinished += (sender, args) =>
+                            {
+                                var generation = algorithm.Generations.Last();
+                                var bestIndividuals = algorithm.GetBestIndividuals(generation);
+                                var newBestFitness = bestIndividuals.First().FitnessValues.First();
+                                
+                                // Calculate population statistics
+                                var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+                                meanFitness = allFitnesses.Average();
+                                stdFitness = allFitnesses.Length > 1 ? 
+                                    Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+                                
+                                currentGeneration = algorithm.Generations.Count;
+                                
+                                // Check if this is a multi-objective problem
+                                var isMultiObjective = bestIndividuals.First().FitnessValues.Count > 1;
+                                
+                                if (isMultiObjective)
+                                {
+                                    // For multi-objective: store Pareto front and all individuals for scatter plot
+                                    paretoFront.Clear();
+                                    allIndividuals.Clear();
+                                    paretoFront.AddRange(bestIndividuals.Take(50)); // Limit to 50 Pareto points
+                                    allIndividuals.AddRange(generation.Population.Take(100)); // Limit to 100 total points
+                                    bestFitness = newBestFitness; // Still track for header display
+                                }
+                                else
+                                {
+                                    // For single-objective: only add to fitness history if fitness improved
+                                    // For minimization problems, improvement means lower fitness value
+                                    var isFirstGeneration = fitnessHistory.Count == 0;
+                                    var hasImproved = isFirstGeneration || newBestFitness < bestFitness;
+                                    
+                                    if (hasImproved)
+                                    {
+                                        bestFitness = newBestFitness;
+                                        fitnessHistory.Add(bestFitness);
+                                        if (fitnessHistory.Count > 20) fitnessHistory.RemoveAt(0); // Keep last 20
+                                    }
+                                }
+                                
+                                // Update the layout
+                                var updatedLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
+                                ctx.UpdateTarget(updatedLayout);
+                                
+                                // Pause after each generation if we were stepping or if paused
+                                if (isPaused || shouldStep)
+                                {
+                                    status = "PAUSED";
+                                    shouldStep = false;
+                                    
+                                    // Wait until unpaused or step requested
+                                    while ((isPaused && !shouldStep) && !shouldExit && currentGeneration < algorithmParams.MaxGenerations)
+                                    {
+                                        Thread.Sleep(50);
+                                    }
+                                    
+                                    if (shouldStep)
+                                    {
+                                        shouldStep = false;
+                                        status = "RUNNING";
+                                    }
+                                    else if (!isPaused)
+                                    {
+                                        status = "RUNNING";
+                                        Thread.Sleep(200); // Delay between generations when running
+                                    }
+                                }
+                                else if (!isPaused)
+                                {
+                                    Thread.Sleep(200); // Delay between generations when running
+                                }
+                            };
+                            
+                            // Start optimization in background thread
+                            var optimizationThread = new Thread(() =>
+                            {
+                                try
+                                {
+                                    algorithm.Optimize();
+                                }
+                                catch (Exception ex)
+                                {
+                                    // Handle any exceptions
+                                    status = "ERROR: " + ex.Message;
+                                }
+                            });
+                            optimizationThread.Start();
+                        }
+                        else
+                        {
+                            // Small delay to prevent high CPU usage when paused
+                            Thread.Sleep(50);
+                        }
+                    }
                     
                     // Final update
-                    status = "COMPLETED";
-                    var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, status);
+                    status = shouldExit ? "STOPPED" : "COMPLETED";
+                    var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
                     ctx.UpdateTarget(finalLayout);
                     
-                    // Hold the display briefly to show completion
+                    // Hold the display briefly
                     Thread.Sleep(1000);
                 });
         }
@@ -264,19 +374,40 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         DisplayResults(algorithm, algorithmParams);
     }
     
-    private static Layout CreatePanelLayout(string problemName, AlgorithmParameters parameters, int generation, double bestFitness, double meanFitness, double stdFitness, List<double> fitnessHistory, string status)
+    private static Layout CreatePanelLayout(string problemName, AlgorithmParameters parameters, int generation, double bestFitness, double meanFitness, double stdFitness, List<double> fitnessHistory, List<ParetoEvaluatedIndividual> paretoFront, string status, List<ParetoEvaluatedIndividual> allIndividuals = null)
     {
         // Create main layout
         var layout = new Layout("Root")
             .SplitRows(
                 new Layout("Header").Size(4),
                 new Layout("Content"),
-                new Layout("Footer").Size(3)
+                new Layout("Footer").Size(4)  // Increased size for controls
             );
 
-        // Header Panel
+        // Header Panel - show all fitness values for multi-objective problems
+        var bestFitnessDisplay = "";
+        if (paretoFront.Count > 0)
+        {
+            var isMultiObjective = paretoFront.First().FitnessValues.Count > 1;
+            if (isMultiObjective)
+            {
+                // Show all fitness values for multi-objective - use InvariantCulture to avoid comma issues
+                var fitnessValues = paretoFront.First().FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture));
+                var allFitnessValues = string.Join(" | ", fitnessValues);
+                bestFitnessDisplay = $"Best Fitness: [{allFitnessValues}]";
+            }
+            else
+            {
+                bestFitnessDisplay = $"Best Fitness: {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}";
+            }
+        }
+        else
+        {
+            bestFitnessDisplay = $"Best Fitness: {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}";
+        }
+        
         var headerContent = $"🧬 Differential Evolution - {problemName}\n" +
-                           $"Generation: {generation}/{parameters.MaxGenerations}  |  Best Fitness: {bestFitness:F6}\n" +
+                           $"Generation: {generation}/{parameters.MaxGenerations}  |  {bestFitnessDisplay.EscapeMarkup()}\n" +
                            $"Population: {parameters.PopulationSize}  |  Status: {status}";
         
         layout["Header"].Update(
@@ -285,41 +416,45 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 .BorderColor(status == "COMPLETED" ? Color.Green : status == "RUNNING" ? Color.Blue : Color.Yellow)
         );
 
-        // Content - split into left and right
-        layout["Content"].SplitColumns(
-            new Layout("Chart"),
-            new Layout("Stats").Size(40)
+        // Chart - either fitness evolution or Pareto scatter plot
+        string chartContent;
+        string chartHeader;
+        
+        if (paretoFront.Count > 0 && paretoFront.First().FitnessValues.Count > 1)
+        {
+            // Multi-objective: show Pareto front scatter plot with all individuals
+            chartContent = CreateParetoScatterPlot(paretoFront, allIndividuals);
+            chartHeader = "🎯 PARETO FRONT (X-Y SCATTER)";
+        }
+        else
+        {
+            // Single-objective: show fitness evolution
+            chartContent = CreateSimpleFitnessChart(fitnessHistory, generation);
+            chartHeader = "📈 FITNESS EVOLUTION";
+        }
+        
+        // Content - split to create space at top and chart at bottom
+        layout["Content"].SplitRows(
+            new Layout("Spacer").Size(2),
+            new Layout("Chart")
         );
-
-        // Fitness Chart
-        var chartContent = CreateSimpleFitnessChart(fitnessHistory, generation);
+        
         layout["Content"]["Chart"].Update(
             new Panel(chartContent)
-                .Header("📈 FITNESS EVOLUTION")
+                .Header(chartHeader)
                 .BorderColor(Color.Green)
         );
-
-        // Statistics Panel  
-        var statsContent = $"📊 CURRENT STATISTICS\n\n" +
-                          $"Best Individual:\n" +
-                          $"  Fitness: {bestFitness:F6}\n\n" +
-                          $"Population Stats:\n" +
-                          $"  Mean:   {meanFitness:F6}\n" +
-                          $"  Std:    {stdFitness:F6}\n\n" +
-                          $"Algorithm Parameters:\n" +
-                          $"  Population: {parameters.PopulationSize}\n" +
-                          $"  CR: {parameters.CrossoverRate}\n" +
-                          $"  F: {parameters.DifferentialWeight}";
-
-        layout["Content"]["Stats"].Update(
-            new Panel(statsContent)
-                .BorderColor(Color.Blue)
-        );
+        
+        // Empty spacer at top
+        layout["Content"]["Spacer"].Update(new Panel("").NoBorder());
 
         // Footer
         var progress = parameters.MaxGenerations > 0 ? (double)generation / parameters.MaxGenerations : 0;
         var progressBar = CreateProgressBar(progress, 30);
-        var footerContent = $"Progress: {progressBar} {progress:P1} | Status: {status}";
+        var controlsText = status == "PAUSED" ? 
+            "SPACE = Play | → = Step | Q = Quit" : 
+            "SPACE = Pause | Q = Quit";
+        var footerContent = $"Progress: {progressBar} {progress.ToString("P1", CultureInfo.InvariantCulture)}\n{controlsText}";
         
         layout["Footer"].Update(
             new Panel(footerContent)
@@ -327,6 +462,91 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         );
 
         return layout;
+    }
+    
+    private static string CreateParetoScatterPlot(List<ParetoEvaluatedIndividual> paretoFront, List<ParetoEvaluatedIndividual> allIndividuals = null)
+    {
+        if (paretoFront.Count == 0) return "No Pareto solutions yet - optimization will start soon...";
+        
+        // Use all individuals if provided, otherwise just Pareto front
+        var individualsToPlot = allIndividuals ?? paretoFront;
+        
+        var result = new List<string>();
+        result.Add($"Population scatter plot ({individualsToPlot.Count} points):");
+        result.Add("Green = Pareto-optimal (ParetoRank=0), Yellow = Non-optimal");
+        result.Add("");
+        
+        // Extract X and Y coordinates from all individuals to determine bounds
+        var allXValues = individualsToPlot.Select(p => p.FitnessValues[0]).ToList();
+        var allYValues = individualsToPlot.Select(p => p.FitnessValues[1]).ToList();
+        
+        var xMin = allXValues.Min();
+        var xMax = allXValues.Max();
+        var yMin = allYValues.Min();
+        var yMax = allYValues.Max();
+        
+        var xRange = xMax - xMin;
+        var yRange = yMax - yMin;
+        
+        if (xRange == 0) xRange = 1;
+        if (yRange == 0) yRange = 1;
+        
+        // Create ASCII scatter plot (40x20 grid)
+        const int width = 40;
+        const int height = 20;
+        var grid = new (char symbol, bool isPareto)[height][];
+        for (int i = 0; i < height; i++)
+        {
+            grid[i] = new (char, bool)[width];
+            Array.Fill(grid[i], (' ', false));
+        }
+        
+        // Plot all individuals
+        foreach (var individual in individualsToPlot)
+        {
+            var x = individual.FitnessValues[0];
+            var y = individual.FitnessValues[1];
+            
+            var xPos = (int)((x - xMin) / xRange * (width - 1));
+            var yPos = height - 1 - (int)((y - yMin) / yRange * (height - 1)); // Flip Y axis
+            
+            xPos = Math.Max(0, Math.Min(width - 1, xPos));
+            yPos = Math.Max(0, Math.Min(height - 1, yPos));
+            
+            // Use ParetoRank directly - 0 means Pareto-optimal
+            bool isPareto = individual.ParetoRank == 0;
+            grid[yPos][xPos] = ('●', isPareto);
+        }
+        
+        // Convert grid to colored strings
+        for (int y = 0; y < height; y++)
+        {
+            var line = "";
+            for (int x = 0; x < width; x++)
+            {
+                var (symbol, isPareto) = grid[y][x];
+                if (symbol == '●')
+                {
+                    // Add color markup for Spectre.Console
+                    if (isPareto)
+                        line += "[green]●[/]"; // Green for Pareto-optimal
+                    else
+                        line += "[yellow]●[/]"; // Yellow for non-optimal
+                }
+                else
+                {
+                    line += symbol;
+                }
+            }
+            result.Add(line);
+        }
+        
+        // Add axis labels
+        result.Add(new string('─', width) + "+");
+        result.Add($"X: ({xMin.ToString("F3", CultureInfo.InvariantCulture)}, {xMax.ToString("F3", CultureInfo.InvariantCulture)})");
+        result.Add($"Y: ({yMin.ToString("F3", CultureInfo.InvariantCulture)}, {yMax.ToString("F3", CultureInfo.InvariantCulture)})");
+        
+        return string.Join("\n", result);
     }
     
     private static string CreateSimpleFitnessChart(List<double> history, int currentGeneration)
@@ -349,7 +569,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
             var barLength = (int)(normalized * 40);
             var bar = new string('█', Math.Max(1, barLength));
             var improvementNumber = i + 1;
-            result.Add($"#{improvementNumber,2}: {bar} ({history[i]:F6})");
+            result.Add($"#{improvementNumber,2}: {bar} ({history[i].ToString("F6", CultureInfo.InvariantCulture)})");
         }
         
         return string.Join("\n", result);
@@ -379,7 +599,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
             
             // Display UI-style progress
-            Console.WriteLine($"📈 Generation {algorithm.Generations.Count,4}: Best={bestFitness:F6}, Mean={meanFitness:F6}, Std={stdFitness:F6}");
+            Console.WriteLine($"📈 Generation {algorithm.Generations.Count,4}: Best={bestFitness.ToString("F6", CultureInfo.InvariantCulture)}, Mean={meanFitness.ToString("F6", CultureInfo.InvariantCulture)}, Std={stdFitness.ToString("F6", CultureInfo.InvariantCulture)}");
             
             // Show progress bar every 10 generations
             if (algorithm.Generations.Count % 10 == 0)
@@ -388,7 +608,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 var progressBarWidth = 30;
                 var filled = (int)(progress * progressBarWidth);
                 var progressBar = new string('█', filled) + new string('░', progressBarWidth - filled);
-                Console.WriteLine($"📊 Progress: [{progressBar}] {progress:P1}");
+                Console.WriteLine($"📊 Progress: [{progressBar}] {progress.ToString("P1", CultureInfo.InvariantCulture)}");
             }
         };
 
@@ -413,7 +633,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 var bestIndividuals = algorithm.GetBestIndividuals(generation);
                 var bestFitness = bestIndividuals.First().FitnessValues.First();
                 
-                AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness:F6}[/]");
+                AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}[/]");
             };
         }
         else
@@ -427,7 +647,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                     var bestIndividuals = algorithm.GetBestIndividuals(generation);
                     var bestFitness = bestIndividuals.First().FitnessValues.First();
                     
-                    AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness:F6}[/]");
+                    AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}[/]");
                 }
             };
         }
@@ -453,8 +673,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         for (int i = 0; i < Math.Min(5, bestIndividuals.Count); i++)
         {
             var individual = bestIndividuals[i];
-            var genes = string.Join(", ", individual.Genes.Select(g => g.ToString("F6")));
-            var fitness = string.Join(", ", individual.FitnessValues.Select(f => f.ToString("F6")));
+            var genes = string.Join(", ", individual.Genes.Select(g => g.ToString("F6", CultureInfo.InvariantCulture)));
+            var fitness = string.Join(", ", individual.FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture)));
             
             table.AddRow($"#{i + 1}", genes, fitness);
         }
@@ -488,8 +708,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
 
         foreach (var individual in individuals)
         {
-            var geneValues = individual.Genes.Select(g => g.ToString("F6"));
-            var fitnessValues = individual.FitnessValues.Select(f => f.ToString("F6"));
+            var geneValues = individual.Genes.Select(g => g.ToString("F6", CultureInfo.InvariantCulture));
+            var fitnessValues = individual.FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture));
             var row = string.Join(",", geneValues.Concat(fitnessValues));
             lines.Add(row);
         }
