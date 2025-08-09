@@ -16,6 +16,7 @@ public record AlgorithmParameters
     public int? Seed { get; init; }
     public bool Verbose { get; init; }
     public string? OutputCsv { get; init; }
+    public bool UseUI { get; init; }
 }
 
 /// <summary>

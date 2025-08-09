@@ -39,4 +39,8 @@ public abstract class OptimizationSettingsBase : CommandSettings
     [Description("Save results to CSV file")]
     [CommandOption("--output-csv")]
     public string? OutputCsv { get; init; }
+
+    [Description("Show interactive UI during optimization")]
+    [CommandOption("--ui")]
+    public bool UseUI { get; init; }
 }

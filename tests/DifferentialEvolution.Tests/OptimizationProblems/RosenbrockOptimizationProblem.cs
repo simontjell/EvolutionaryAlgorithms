@@ -77,7 +77,8 @@ namespace DifferentialEvolution.Tests.OptimizationProblems
                 DifferentialWeight = settings.DifferentialWeight,
                 Seed = settings.Seed,
                 Verbose = settings.Verbose,
-                OutputCsv = settings.OutputCsv
+                OutputCsv = settings.OutputCsv,
+                UseUI = settings.UseUI
             };
         }
     }

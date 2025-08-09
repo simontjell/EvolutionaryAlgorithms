@@ -2,12 +2,14 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using EvolutionaryAlgorithm;
 using EvolutionaryAlgorithms.CLI.Cli;
 using EvolutionaryAlgorithm.TerminationCriteria;
 using DifferentialEvolution;
+using EvolutionaryAlgorithms.CLI.UI;
 
 namespace EvolutionaryAlgorithms.CLI.Commands;
 
@@ -76,11 +78,95 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
 
         var algorithm = new DifferentialEvolution.DifferentialEvolution(problem, parameters, random);
 
+        if (algorithmParams.UseUI)
+        {
+            // Use interactive UI
+            RunOptimizationWithUI(algorithm, problem, algorithmParams).GetAwaiter().GetResult();
+        }
+        else
+        {
+            // Use standard console output
+            RunOptimizationConsole(algorithm, problem, algorithmParams);
+        }
+    }
+
+    private static async Task RunOptimizationWithUI(DifferentialEvolution.DifferentialEvolution algorithm, IOptimizationProblem problem, AlgorithmParameters algorithmParams)
+    {
+        var problemName = problem.GetType().Name;
+        using var uiManager = new UIManager(problemName, algorithmParams);
+        
+        // Set up event handler to update UI
+        algorithm.OnGenerationFinished += (sender, args) =>
+        {
+            var generation = algorithm.Generations.Last();
+            var bestIndividuals = algorithm.GetBestIndividuals(generation);
+            var bestFitness = bestIndividuals.First().FitnessValues.First();
+            
+            // Calculate population statistics
+            var allFitnesses = generation.Population.Select(p => p.FitnessValues.First()).ToArray();
+            var meanFitness = allFitnesses.Average();
+            var stdFitness = allFitnesses.Length > 1 ? 
+                Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
+            
+            uiManager.UpdateGeneration(
+                algorithm.Generations.Count, 
+                bestFitness, 
+                meanFitness, 
+                stdFitness,
+                generation.Population
+            );
+        };
+        
+        // Start UI in background task
+        var uiTask = Task.Run(() => uiManager.StartAsync());
+        
+        // Run optimization in separate task
+        var optimizationTask = Task.Run(() =>
+        {
+            try
+            {
+                while (!uiManager.ShouldExit)
+                {
+                    if (!uiManager.IsPaused)
+                    {
+                        // Run one generation step (this would require breaking down Optimize method)
+                        algorithm.Optimize(); // For now, run all at once
+                        break; // Exit after complete optimization for now
+                    }
+                    else
+                    {
+                        Task.Delay(100).Wait(); // Wait while paused
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex);
+            }
+        });
+        
+        // Wait for either task to complete
+        await Task.WhenAny(uiTask, optimizationTask);
+        
+        // If optimization completed, wait a bit more for user to see results
+        if (optimizationTask.IsCompleted && !uiManager.ShouldExit)
+        {
+            await Task.Delay(2000); // Show final results for 2 seconds
+        }
+        
+        // Display final results if not using UI or if UI was exited
+        if (uiManager.ShouldExit || optimizationTask.IsCompleted)
+        {
+            DisplayResults(algorithm, algorithmParams);
+        }
+    }
+
+    private static void RunOptimizationConsole(DifferentialEvolution.DifferentialEvolution algorithm, IOptimizationProblem problem, AlgorithmParameters algorithmParams)
+    {
         AnsiConsole.MarkupLine($"[green]Running {problem.GetType().Name}[/]");
         AnsiConsole.MarkupLine($"[dim]Population size: {algorithmParams.PopulationSize}, Max generations: {algorithmParams.MaxGenerations}[/]");
         AnsiConsole.MarkupLine($"[dim]CR: {algorithmParams.CrossoverRate}, F: {algorithmParams.DifferentialWeight}[/]");
 
-        // TODO: Replace with rich live UI
         if (algorithmParams.Verbose)
         {
             algorithm.OnGenerationFinished += (sender, args) =>
@@ -94,11 +180,10 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         }
         else
         {
-            // Use live UI by default - this would need the UI components from CLI project
-            // For now just show simple progress
+            // Show progress every 10th generation
             algorithm.OnGenerationFinished += (sender, args) =>
             {
-                if (algorithm.Generations.Count % 10 == 0) // Show every 10th generation
+                if (algorithm.Generations.Count % 10 == 0)
                 {
                     var generation = algorithm.Generations.Last();
                     var bestIndividuals = algorithm.GetBestIndividuals(generation);
@@ -110,7 +195,6 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         }
 
         algorithm.Optimize();
-
         DisplayResults(algorithm, algorithmParams);
     }
 
