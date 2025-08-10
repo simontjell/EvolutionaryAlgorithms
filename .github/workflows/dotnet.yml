@@ -29,6 +29,8 @@ jobs:
     - name: NuGet (pack)
       run: dotnet pack --configuration Release
     - name: NuGet (push, 1)
-      run: dotnet nuget push src/EvolutionaryAlgorithm/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: dotnet nuget push src/EvolutionaryAlgorithm/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json --skip-duplicate
     - name: NuGet (push, 2)
-      run: dotnet nuget push src/DifferentialEvolution/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: dotnet nuget push src/DifferentialEvolution/bin/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/simontjell/index.json --skip-duplicate
