@@ -55,15 +55,8 @@ namespace EvolutionaryAlgorithm
                     }
                 }
 
-                var paretoEvaluated = 
-                    newPopulation
-                    .Select(
-                        evaluatedIndividual => 
-                            evaluatedIndividual
-                            .AddParetoRank(
-                                CalculateParetoRank(evaluatedIndividual, newPopulation))
-                    )
-                    .ToImmutableList();
+                // Use fast non-dominated sorting for better performance
+                var paretoEvaluated = FastNonDominatedSort.AssignParetoRanks(newPopulation);
 
                 var truncated = TruncatePopulation(paretoEvaluated);
 
@@ -74,14 +67,70 @@ namespace EvolutionaryAlgorithm
         }
 
         protected virtual bool ShouldOffspringSurvive(EvaluatedOffspring evaluatedOffspringIndividual, IImmutableList<EvaluatedIndividual> survivingParents)
-            => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
+        {
+            // If no parents survived, offspring should definitely survive
+            if (survivingParents.Count == 0)
+                return true;
+            
+            // If offspring dominates any parent, it should survive
+            if (evaluatedOffspringIndividual.Parents.Any(parent => evaluatedOffspringIndividual.ParetoDominates(parent)))
+                return true;
+            
+            // If offspring is non-dominated by all parents (e.g., both are Pareto-optimal), it should survive
+            if (!evaluatedOffspringIndividual.Parents.Any(parent => parent.ParetoDominates(evaluatedOffspringIndividual)))
+                return true;
+            
+            return false;
+        }
 
         private IImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(IImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
-            => 
-                GetProblemDimensionality() == 1 ?
-                paretoEvaluated.OrderBy(individual => individual.FitnessValues.First()).ToImmutableList()
-                :
-                paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).Take(_populationSize).ToImmutableList();
+        {
+            if (GetProblemDimensionality() == 1)
+            {
+                // Single objective - simple sorting
+                return paretoEvaluated
+                    .OrderBy(individual => individual.FitnessValues.First())
+                    .Take(_populationSize)
+                    .ToImmutableList();
+            }
+            else
+            {
+                // Multi-objective - use NSGA-II selection
+                if (paretoEvaluated.Count <= _populationSize)
+                    return paretoEvaluated;
+                
+                // Group by Pareto rank
+                var rankedGroups = paretoEvaluated.GroupBy(ind => ind.ParetoRank).OrderBy(g => g.Key).ToList();
+                var selected = new List<ParetoEvaluatedIndividual>();
+                
+                foreach (var group in rankedGroups)
+                {
+                    var groupList = group.ToList();
+                    
+                    if (selected.Count + groupList.Count <= _populationSize)
+                    {
+                        // Take entire group if it fits
+                        selected.AddRange(groupList);
+                    }
+                    else
+                    {
+                        // Need to select subset using crowding distance
+                        var remaining = _populationSize - selected.Count;
+                        if (remaining <= 0) break;
+                        
+                        var crowdingDistances = CrowdingDistance.CalculateCrowdingDistances(groupList);
+                        var sortedByDistance = groupList
+                            .OrderByDescending(ind => crowdingDistances[ind])
+                            .Take(remaining);
+                            
+                        selected.AddRange(sortedByDistance);
+                        break; // Population is now full
+                    }
+                }
+                
+                return selected.ToImmutableList();
+            }
+        }
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
         protected static double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
@@ -91,7 +140,13 @@ namespace EvolutionaryAlgorithm
             => newPopulation.Count(evaluatedIndividual.IsParetoDominatedBy);
 
         protected virtual IImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
-            => evaluatedOffspringIndividual.Parents.Where(evaluatedOffspringIndividual.IsParetoDominatedBy).ToImmutableList();
+        {
+            // For multi-objective: keep parents that are NOT dominated by offspring
+            // For single-objective: keep parents that are better than offspring
+            return evaluatedOffspringIndividual.Parents
+                .Where(parent => !evaluatedOffspringIndividual.ParetoDominates(parent))
+                .ToImmutableList();
+        }
 
         protected abstract Generation InitializeFirstGeneration();
 
