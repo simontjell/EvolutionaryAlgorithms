@@ -132,10 +132,10 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 return; // This will exit the generation loop
             }
             
-            // Add small delay between generations to make progress visible
+            // Minimal delay only when UI is active (reduce from 50ms to 10ms)
             if (!uiManager.ShouldExit)
             {
-                Task.Delay(50).Wait();
+                Task.Delay(10).Wait();
             }
         };
         
@@ -323,12 +323,12 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                                     else if (!isPaused)
                                     {
                                         status = "RUNNING";
-                                        Thread.Sleep(200); // Delay between generations when running
+                                        Thread.Sleep(20); // Reduced delay for better performance (200ms -> 20ms)
                                     }
                                 }
                                 else if (!isPaused)
                                 {
-                                    Thread.Sleep(200); // Delay between generations when running
+                                    Thread.Sleep(20); // Reduced delay for better performance (200ms -> 20ms)
                                 }
                             };
                             
