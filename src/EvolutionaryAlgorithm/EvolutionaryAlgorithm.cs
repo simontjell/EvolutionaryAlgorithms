@@ -67,7 +67,21 @@ namespace EvolutionaryAlgorithm
         }
 
         protected virtual bool ShouldOffspringSurvive(EvaluatedOffspring evaluatedOffspringIndividual, IImmutableList<EvaluatedIndividual> survivingParents)
-            => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
+        {
+            // If no parents survived, offspring should definitely survive
+            if (survivingParents.Count == 0)
+                return true;
+            
+            // If offspring dominates any parent, it should survive
+            if (evaluatedOffspringIndividual.Parents.Any(parent => evaluatedOffspringIndividual.ParetoDominates(parent)))
+                return true;
+            
+            // If offspring is non-dominated by all parents (e.g., both are Pareto-optimal), it should survive
+            if (!evaluatedOffspringIndividual.Parents.Any(parent => parent.ParetoDominates(evaluatedOffspringIndividual)))
+                return true;
+            
+            return false;
+        }
 
         private IImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(IImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
         {
@@ -81,7 +95,7 @@ namespace EvolutionaryAlgorithm
             }
             else
             {
-                // Multi-objective - NEVER eliminate Pareto-optimal individuals
+                // Multi-objective - use NSGA-II selection
                 if (paretoEvaluated.Count <= _populationSize)
                     return paretoEvaluated;
                 
@@ -126,7 +140,13 @@ namespace EvolutionaryAlgorithm
             => newPopulation.Count(evaluatedIndividual.IsParetoDominatedBy);
 
         protected virtual IImmutableList<EvaluatedIndividual> GetSurvivingParents(EvaluatedOffspring evaluatedOffspringIndividual)
-            => evaluatedOffspringIndividual.Parents.Where(evaluatedOffspringIndividual.IsParetoDominatedBy).ToImmutableList();
+        {
+            // For multi-objective: keep parents that are NOT dominated by offspring
+            // For single-objective: keep parents that are better than offspring
+            return evaluatedOffspringIndividual.Parents
+                .Where(parent => !evaluatedOffspringIndividual.ParetoDominates(parent))
+                .ToImmutableList();
+        }
 
         protected abstract Generation InitializeFirstGeneration();
 

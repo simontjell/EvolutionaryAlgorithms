@@ -277,7 +277,10 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                                     paretoFront.Clear();
                                     allIndividuals.Clear();
                                     paretoFront.AddRange(bestIndividuals.Take(50)); // Limit to 50 Pareto points
-                                    allIndividuals.AddRange(generation.Population.Take(100)); // Limit to 100 total points
+                                    
+                                    // Sort by ParetoRank ascending (0 first, then 1, 2, etc.) and take first 100
+                                    allIndividuals.AddRange(generation.Population.OrderBy(ind => ind.ParetoRank).Take(100));
+                                    
                                     bestFitness = newBestFitness; // Still track for header display
                                 }
                                 else
@@ -461,10 +464,10 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
     
     private static string CreateParetoScatterPlot(List<ParetoEvaluatedIndividual> paretoFront, List<ParetoEvaluatedIndividual> allIndividuals = null)
     {
-        if (paretoFront.Count == 0) return "No Pareto solutions yet - optimization will start soon...";
+        if (paretoFront.Count == 0) return "No Pareto solutions yet - press SPACE to start optimization...";
         
         // Use all individuals if provided, otherwise just Pareto front
-        var individualsToPlot = allIndividuals ?? paretoFront;
+        var individualsToPlot = allIndividuals ?? throw new ArgumentNullException(nameof(allIndividuals), "All individuals must be provided for scatter plot.");
         
         var result = new List<string>();
         
@@ -552,7 +555,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
     
     private static string CreateSimpleFitnessChart(List<double> history, int currentGeneration)
     {
-        if (history.Count == 0) return "No data yet - optimization will start soon...";
+        if (history.Count == 0) return "No data yet - press SPACE to start optimization...";
         
         var result = new List<string>();
         result.Add("Fitness improvements (last " + Math.Min(20, history.Count) + " shown):");
