@@ -55,15 +55,8 @@ namespace EvolutionaryAlgorithm
                     }
                 }
 
-                var paretoEvaluated = 
-                    newPopulation
-                    .Select(
-                        evaluatedIndividual => 
-                            evaluatedIndividual
-                            .AddParetoRank(
-                                CalculateParetoRank(evaluatedIndividual, newPopulation))
-                    )
-                    .ToImmutableList();
+                // Use fast non-dominated sorting for better performance
+                var paretoEvaluated = FastNonDominatedSort.AssignParetoRanks(newPopulation);
 
                 var truncated = TruncatePopulation(paretoEvaluated);
 
@@ -77,11 +70,32 @@ namespace EvolutionaryAlgorithm
             => survivingParents.Count < evaluatedOffspringIndividual.Parents.Count;
 
         private IImmutableList<ParetoEvaluatedIndividual> TruncatePopulation(IImmutableList<ParetoEvaluatedIndividual> paretoEvaluated)
-            => 
-                GetProblemDimensionality() == 1 ?
-                paretoEvaluated.OrderBy(individual => individual.FitnessValues.First()).ToImmutableList()
-                :
-                paretoEvaluated.OrderBy(individual => individual.ParetoRank).ThenByDescending(individual => ScatteringMeasure(individual, paretoEvaluated)).Take(_populationSize).ToImmutableList();
+        {
+            if (GetProblemDimensionality() == 1)
+            {
+                // Single objective - simple sorting
+                return paretoEvaluated
+                    .OrderBy(individual => individual.FitnessValues.First())
+                    .Take(_populationSize)
+                    .ToImmutableList();
+            }
+            else
+            {
+                // Multi-objective - use crowding distance for diversity
+                if (paretoEvaluated.Count <= _populationSize)
+                    return paretoEvaluated;
+                
+                // Calculate crowding distances efficiently
+                var crowdingDistances = CrowdingDistance.CalculateCrowdingDistancesByRank(paretoEvaluated);
+                
+                // Sort by rank, then by crowding distance (larger is better)
+                return paretoEvaluated
+                    .OrderBy(individual => individual.ParetoRank)
+                    .ThenByDescending(individual => crowdingDistances[individual])
+                    .Take(_populationSize)
+                    .ToImmutableList();
+            }
+        }
 
         // TODO: Find a good generic measure (e.g., average Euclidean distance in objective space to other individuals)
         protected static double ScatteringMeasure(ParetoEvaluatedIndividual individual, IImmutableList<ParetoEvaluatedIndividual> population) 
