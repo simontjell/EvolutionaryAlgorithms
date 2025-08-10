@@ -98,16 +98,9 @@ namespace EvolutionaryAlgorithm
                         // Take entire group if it fits
                         selected.AddRange(groupList);
                     }
-                    else if (group.Key == 0)
-                    {
-                        // CRITICAL: Always take ALL Pareto-optimal individuals (rank 0)
-                        // even if it exceeds population size - they must never be eliminated!
-                        selected.AddRange(groupList);
-                        break; // Don't add any more ranks
-                    }
                     else
                     {
-                        // For non-optimal ranks, use crowding distance to select subset
+                        // Need to select subset using crowding distance
                         var remaining = _populationSize - selected.Count;
                         if (remaining <= 0) break;
                         
@@ -117,7 +110,7 @@ namespace EvolutionaryAlgorithm
                             .Take(remaining);
                             
                         selected.AddRange(sortedByDistance);
-                        break;
+                        break; // Population is now full
                     }
                 }
                 
