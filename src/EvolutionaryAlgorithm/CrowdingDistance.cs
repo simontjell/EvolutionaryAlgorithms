@@ -7,6 +7,13 @@ namespace EvolutionaryAlgorithm
     /// <summary>
     /// Crowding Distance calculation for maintaining diversity in Pareto fronts
     /// Used in NSGA-II algorithm for selecting individuals within the same rank
+    /// 
+    /// Reference:
+    /// Deb, K., Pratap, A., Agarwal, S., & Meyarivan, T. (2002). 
+    /// A fast and elitist multiobjective genetic algorithm: NSGA-II. 
+    /// IEEE transactions on evolutionary computation, 6(2), 182-197.
+    /// DOI: 10.1109/4235.996017
+    /// Section III-B: Crowding-distance assignment
     /// </summary>
     public static class CrowdingDistance
     {
