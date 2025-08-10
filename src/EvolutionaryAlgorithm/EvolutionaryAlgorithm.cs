@@ -81,19 +81,47 @@ namespace EvolutionaryAlgorithm
             }
             else
             {
-                // Multi-objective - use crowding distance for diversity
+                // Multi-objective - NEVER eliminate Pareto-optimal individuals
                 if (paretoEvaluated.Count <= _populationSize)
                     return paretoEvaluated;
                 
-                // Calculate crowding distances efficiently
-                var crowdingDistances = CrowdingDistance.CalculateCrowdingDistancesByRank(paretoEvaluated);
+                // Group by Pareto rank
+                var rankedGroups = paretoEvaluated.GroupBy(ind => ind.ParetoRank).OrderBy(g => g.Key).ToList();
+                var selected = new List<ParetoEvaluatedIndividual>();
                 
-                // Sort by rank, then by crowding distance (larger is better)
-                return paretoEvaluated
-                    .OrderBy(individual => individual.ParetoRank)
-                    .ThenByDescending(individual => crowdingDistances[individual])
-                    .Take(_populationSize)
-                    .ToImmutableList();
+                foreach (var group in rankedGroups)
+                {
+                    var groupList = group.ToList();
+                    
+                    if (selected.Count + groupList.Count <= _populationSize)
+                    {
+                        // Take entire group if it fits
+                        selected.AddRange(groupList);
+                    }
+                    else if (group.Key == 0)
+                    {
+                        // CRITICAL: Always take ALL Pareto-optimal individuals (rank 0)
+                        // even if it exceeds population size - they must never be eliminated!
+                        selected.AddRange(groupList);
+                        break; // Don't add any more ranks
+                    }
+                    else
+                    {
+                        // For non-optimal ranks, use crowding distance to select subset
+                        var remaining = _populationSize - selected.Count;
+                        if (remaining <= 0) break;
+                        
+                        var crowdingDistances = CrowdingDistance.CalculateCrowdingDistances(groupList);
+                        var sortedByDistance = groupList
+                            .OrderByDescending(ind => crowdingDistances[ind])
+                            .Take(remaining);
+                            
+                        selected.AddRange(sortedByDistance);
+                        break;
+                    }
+                }
+                
+                return selected.ToImmutableList();
             }
         }
 
