@@ -467,7 +467,13 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var individualsToPlot = allIndividuals ?? paretoFront;
         
         var result = new List<string>();
+        
+        // Calculate Pareto-optimal percentage
+        var paretoOptimalCount = individualsToPlot.Count(ind => ind.ParetoRank == 0);
+        var paretoPercentage = individualsToPlot.Count > 0 ? (paretoOptimalCount * 100.0 / individualsToPlot.Count) : 0;
+        
         result.Add($"Population scatter plot ({individualsToPlot.Count} points):");
+        result.Add($"Pareto-optimal: {paretoOptimalCount}/{individualsToPlot.Count} ({paretoPercentage.ToString("F1", CultureInfo.InvariantCulture)}%)");
         result.Add("Green = Pareto-optimal (ParetoRank=0), Yellow = Non-optimal");
         result.Add("");
         
