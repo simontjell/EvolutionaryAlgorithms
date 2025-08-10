@@ -132,11 +132,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 return; // This will exit the generation loop
             }
             
-            // Minimal delay only when UI is active (reduce from 50ms to 10ms)
-            if (!uiManager.ShouldExit)
-            {
-                Task.Delay(10).Wait();
-            }
+            // No artificial delays - let the algorithm run at full speed!
         };
         
         // Start UI in background task
@@ -323,12 +319,12 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                                     else if (!isPaused)
                                     {
                                         status = "RUNNING";
-                                        Thread.Sleep(20); // Reduced delay for better performance (200ms -> 20ms)
+                                        // No delay - run at full speed!
                                     }
                                 }
                                 else if (!isPaused)
                                 {
-                                    Thread.Sleep(20); // Reduced delay for better performance (200ms -> 20ms)
+                                    // No delay - run at full speed!
                                 }
                             };
                             
@@ -359,8 +355,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                     var finalLayout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
                     ctx.UpdateTarget(finalLayout);
                     
-                    // Hold the display briefly
-                    Thread.Sleep(1000);
+                    // Display final results without delay
                 });
         }
         finally
