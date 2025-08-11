@@ -190,6 +190,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var shouldStep = false;
         var shouldExit = false;
         var isInitialized = false;
+        Thread? optimizationThread = null;
         
         // Create initial layout
         var layout = CreatePanelLayout(problemName, algorithmParams, currentGeneration, bestFitness, meanFitness, stdFitness, fitnessHistory, paretoFront, status, allIndividuals);
@@ -238,7 +239,9 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                                 case ConsoleKey.Q:
                                 case ConsoleKey.Escape:
                                     shouldExit = true;
-                                    break;
+                                    // Force immediate exit by breaking out of the Live display
+                                    ctx.UpdateTarget(new Panel("Optimization stopped by user").BorderColor(Color.Red));
+                                    return; // Exit the Live display immediately
                             }
                             
                             // Update layout with new status
@@ -256,6 +259,12 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                             var wasRunning = false;
                             algorithm.OnGenerationFinished += (sender, args) =>
                             {
+                                // Check if we should exit immediately
+                                if (shouldExit)
+                                {
+                                    return; // Just return, the main loop will handle exit
+                                }
+                                
                                 var generation = algorithm.Generations.Last();
                                 var bestIndividuals = algorithm.GetBestIndividuals(generation);
                                 var newBestFitness = bestIndividuals.First().FitnessValues.First();
@@ -332,18 +341,26 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                             };
                             
                             // Start optimization in background thread
-                            var optimizationThread = new Thread(() =>
+                            optimizationThread = new Thread(() =>
                             {
                                 try
                                 {
                                     algorithm.Optimize();
+                                }
+                                catch (ThreadInterruptedException)
+                                {
+                                    // Thread was interrupted - clean exit
+                                    status = "STOPPED";
                                 }
                                 catch (Exception ex)
                                 {
                                     // Handle any exceptions
                                     status = "ERROR: " + ex.Message;
                                 }
-                            });
+                            })
+                            {
+                                IsBackground = true // Make it a background thread so it doesn't prevent exit
+                            };
                             optimizationThread.Start();
                         }
                         else
@@ -377,35 +394,34 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         // Create main layout
         var layout = new Layout("Root")
             .SplitRows(
-                new Layout("Header").Size(4),
+                new Layout("Header").Size(5),
                 new Layout("Content"),
                 new Layout("Footer").Size(4)  // Increased size for controls
             );
 
-        // Header Panel - show all fitness values for multi-objective problems
-        var bestFitnessDisplay = "";
-        if (paretoFront.Count > 0)
+        // Header Panel - show relevant info based on problem type
+        var statusDisplay = "";
+        var isMultiObjective = paretoFront.Count > 0 && paretoFront.First().FitnessValues.Count > 1;
+        
+        if (isMultiObjective)
         {
-            var isMultiObjective = paretoFront.First().FitnessValues.Count > 1;
-            if (isMultiObjective)
-            {
-                // Show all fitness values for multi-objective - use InvariantCulture to avoid comma issues
-                var fitnessValues = paretoFront.First().FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture));
-                var allFitnessValues = string.Join(" | ", fitnessValues);
-                bestFitnessDisplay = $"Best Fitness: [{allFitnessValues}]";
-            }
-            else
-            {
-                bestFitnessDisplay = $"Best Fitness: {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}";
-            }
+            // For multi-objective: show Pareto front size
+            var paretoOptimalCount = allIndividuals?.Count(ind => ind.ParetoRank == 0) ?? 0;
+            statusDisplay = $"Pareto Front: {paretoOptimalCount} solutions";
+        }
+        else if (bestFitness == double.MaxValue)
+        {
+            // Not started yet
+            statusDisplay = "Best Fitness: --";
         }
         else
         {
-            bestFitnessDisplay = $"Best Fitness: {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}";
+            // Single objective
+            statusDisplay = $"Best Fitness: {bestFitness.ToString("E3", CultureInfo.InvariantCulture)}";
         }
         
         var headerContent = $"🧬 Differential Evolution - {problemName}\n" +
-                           $"Generation: {generation}/{parameters.MaxGenerations}  |  {bestFitnessDisplay.EscapeMarkup()}\n" +
+                           $"Generation: {generation}/{parameters.MaxGenerations}  |  {statusDisplay.EscapeMarkup()}\n" +
                            $"Population: {parameters.PopulationSize}  |  Status: {status}";
         
         layout["Header"].Update(
@@ -476,7 +492,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         var paretoPercentage = individualsToPlot.Count > 0 ? (paretoOptimalCount * 100.0 / individualsToPlot.Count) : 0;
         
         result.Add($"Population scatter plot ({individualsToPlot.Count} points):");
-        result.Add($"Pareto-optimal: {paretoOptimalCount}/{individualsToPlot.Count} ({paretoPercentage.ToString("F1", CultureInfo.InvariantCulture)}%)");
+        result.Add($"Pareto-optimal: {paretoOptimalCount}/{individualsToPlot.Count} ({paretoPercentage:F1}%)");
         result.Add("Green = Pareto-optimal (ParetoRank=0), Yellow = Non-optimal");
         result.Add("");
         
@@ -547,8 +563,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         
         // Add axis labels
         result.Add(new string('─', width) + "+");
-        result.Add($"X: ({xMin.ToString("F3", CultureInfo.InvariantCulture)}, {xMax.ToString("F3", CultureInfo.InvariantCulture)})");
-        result.Add($"Y: ({yMin.ToString("F3", CultureInfo.InvariantCulture)}, {yMax.ToString("F3", CultureInfo.InvariantCulture)})");
+        result.Add($"X: ({xMin.ToString("E2", CultureInfo.InvariantCulture)}, {xMax.ToString("E2", CultureInfo.InvariantCulture)})");
+        result.Add($"Y: ({yMin.ToString("E2", CultureInfo.InvariantCulture)}, {yMax.ToString("E2", CultureInfo.InvariantCulture)})");
         
         return string.Join("\n", result);
     }
@@ -573,7 +589,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
             var barLength = (int)(normalized * 40);
             var bar = new string('█', Math.Max(1, barLength));
             var improvementNumber = i + 1;
-            result.Add($"#{improvementNumber,2}: {bar} ({history[i].ToString("F6", CultureInfo.InvariantCulture)})");
+            result.Add($"#{improvementNumber,2}: {bar} ({history[i].ToString("E3", CultureInfo.InvariantCulture)})");
         }
         
         return string.Join("\n", result);
@@ -603,7 +619,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 Math.Sqrt(allFitnesses.Sum(f => Math.Pow(f - meanFitness, 2)) / allFitnesses.Length) : 0;
             
             // Display UI-style progress
-            Console.WriteLine($"📈 Generation {algorithm.Generations.Count,4}: Best={bestFitness.ToString("F6", CultureInfo.InvariantCulture)}, Mean={meanFitness.ToString("F6", CultureInfo.InvariantCulture)}, Std={stdFitness.ToString("F6", CultureInfo.InvariantCulture)}");
+            Console.WriteLine($"📈 Generation {algorithm.Generations.Count,4}: Best={bestFitness.ToString("E3", CultureInfo.InvariantCulture)}, Mean={meanFitness.ToString("E3", CultureInfo.InvariantCulture)}, Std={stdFitness.ToString("E3", CultureInfo.InvariantCulture)}");
             
             // Show progress bar every 10 generations
             if (algorithm.Generations.Count % 10 == 0)
@@ -637,7 +653,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                 var bestIndividuals = algorithm.GetBestIndividuals(generation);
                 var bestFitness = bestIndividuals.First().FitnessValues.First();
                 
-                AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}[/]");
+                AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("E3", CultureInfo.InvariantCulture)}[/]");
             };
         }
         else
@@ -651,7 +667,7 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
                     var bestIndividuals = algorithm.GetBestIndividuals(generation);
                     var bestFitness = bestIndividuals.First().FitnessValues.First();
                     
-                    AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("F6", CultureInfo.InvariantCulture)}[/]");
+                    AnsiConsole.MarkupLine($"[dim]Generation {algorithm.Generations.Count}: Best fitness = {bestFitness.ToString("E3", CultureInfo.InvariantCulture)}[/]");
                 }
             };
         }
@@ -677,8 +693,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
         for (int i = 0; i < Math.Min(5, bestIndividuals.Count); i++)
         {
             var individual = bestIndividuals[i];
-            var genes = string.Join(", ", individual.Genes.Select(g => g.ToString("F6", CultureInfo.InvariantCulture)));
-            var fitness = string.Join(", ", individual.FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture)));
+            var genes = string.Join(", ", individual.Genes.Select(g => g.ToString("E3", CultureInfo.InvariantCulture)));
+            var fitness = string.Join(", ", individual.FitnessValues.Select(f => f.ToString("E3", CultureInfo.InvariantCulture)));
             
             table.AddRow($"#{i + 1}", genes, fitness);
         }
@@ -712,8 +728,8 @@ public class OptimizationProblemCommand<TOptimizationProblem, TSettings> : Comma
 
         foreach (var individual in individuals)
         {
-            var geneValues = individual.Genes.Select(g => g.ToString("F6", CultureInfo.InvariantCulture));
-            var fitnessValues = individual.FitnessValues.Select(f => f.ToString("F6", CultureInfo.InvariantCulture));
+            var geneValues = individual.Genes.Select(g => g.ToString("E3", CultureInfo.InvariantCulture));
+            var fitnessValues = individual.FitnessValues.Select(f => f.ToString("E3", CultureInfo.InvariantCulture));
             var row = string.Join(",", geneValues.Concat(fitnessValues));
             lines.Add(row);
         }
