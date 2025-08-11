@@ -12,7 +12,7 @@ An optimization problem is specified in code by implementing a subclass of the a
 3) An optional feasibility predicate (__IsFeasible__). If not overridden, all individuals will be considered feasible - i.e., the search space is only limited by the range of the nummeric types used in the algorithm (__double__).
 
 # Building the solution
-The current implementation is based on .NET 6 (formerly known as .NET Core). The SDK is found here: [https://dotnet.microsoft.com/download/dotnet/6.0](https://dotnet.microsoft.com/download/dotnet/6.0).
+The current implementation is based on .NET 10. The SDK is found here: [[https://dotnet.microsoft.com/download/dotnet/6.0](https://dotnet.microsoft.com/download/dotnet/6.0)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
 
 After installing the SDK, the code is build using the .NET CLI:
 
