@@ -29,6 +29,19 @@ dotnet test
 ```
 
 
+# C implementation
+The __c__ folder contains a performance-focused C implementation of the Differential Evolution algorithm as a single header (__c/de.h__), with no dependencies. It keeps the observable behaviour of the C# version (selection distribution, survival rules, Pareto fronts, truncation order), but uses flat arrays, does not allocate inside the generation loop, draws donors in O(1), and uses ENS-BS non-dominated sorting and radix sorts. The header comment lists every difference. The C#-style donor selection is available too (`DE_SELECT_SHUFFLE`, or `--selection shuffle` in the benchmark), so the effect of that change can be measured on its own.
+
+```
+cd c
+make check                                   # tests
+./bench --scenario sphere_d30_p500_g200      # benchmark one scenario (./bench --list shows all)
+./tui                                        # watch the optimisation run in the terminal
+```
+
+The terminal UI shows the population (or the Pareto front for multi-objective problems), the best fitness per generation, and a panel where the problem, dimensions, population size, CR, F, number of generations, donor selection, seed and speed can be changed while it runs.
+
+
 # Want to help?
 
 Pull requests are very welcome. Some ideas could be:
